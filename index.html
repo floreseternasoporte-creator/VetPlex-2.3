@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>VetPlex — Plataforma de anime</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VetPlex Halloween</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Creepster&display=swap');
+    body {
+      margin: 0;
+      font-family: 'Creepster', cursive, sans-serif;
+      /* FIX: se elimino la foto de Unsplash como fondo del body (era un resto
+         del documento de Halloween concatenado; se veia como "imagen extrana"
+         y franja azulada en iPhone). El fondo oscuro lo define background-color
+         en reglas posteriores (#111). */
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+
+
+    @keyframes flicker {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    h1, h2 {
+      animation: textFly 6s infinite ease-in-out;
+      color: #ffcc00;
+      text-shadow: 0 0 10px #d52b1e, 0 0 20px #a40000;
+      margin-bottom: 20px;
+    }
+
+    @keyframes textFly {
+      0% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      50% {
+        transform: translateX(-20px);
+        opacity: 0.7;
+      }
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    input {
+      display: block;
+      margin: 15px 0;
+      padding: 15px;
+      border: 3px solid #d52b1e;
+      border-radius: 10px;
+      width: 100%;
+      background-color: #1c1c1c;
+      color: #f5f5f5;
+      font-size: 18px;
+      text-shadow: 0 0 5px #d52b1e;
+      box-shadow: 0 0 10px #d52b1e;
+    }
+
+    button {
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      background-color: #a82318;
+      color: white;
+      cursor: pointer;
+      width: 100%;
+      font-size: 20px;
+      transition: background-color 0.3s, box-shadow 0.3s;
+      box-shadow: 0 0 20px #ff4500, inset 0 0 5px #ff4500;
+      text-shadow: 0 0 5px #ffcc00;
+      animation: buttonHover 2s infinite alternate;
+    }
+
+    button:hover {
+      background-color: #d52b1e;
+      box-shadow: 0 0 30px #ff0000, inset 0 0 10px #ff0000;
+    }
+
+    @keyframes buttonHover {
+      from {
+        transform: scale(1);
+        box-shadow: 0 0 20px #ff4500, inset 0 0 5px #ff4500;
+      }
+      to {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px #ff4500, inset 0 0 10px #ff4500;
+      }
+    }
+
+
+
+    /* Animación de letras volando y desintegrándose */
+    @keyframes textFlyApart {
+      0% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      50% {
+        transform: translateY(-10px);
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+    }
+
+    h1 {
+      animation: textFlyApart 6s ease-in-out infinite;
+    }
+
+  </style>
+  <link rel="stylesheet" href="hidden_files/auth-cinematic.css">
+  <script type="module">
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
+      authDomain: "vetplex-animes.firebaseapp.com",
+      projectId: "vetplex-animes",
+      storageBucket: "vetplex-animes.appspot.com",
+      messagingSenderId: "485618641909",
+      appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
+      databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
+    };
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const overlay = document.getElementById('overlay');
+    const loginBox = document.getElementById('login-form');
+    const registerBox = document.getElementById('register-form');
+    const authTitle = document.getElementById('auth-title');
+    const authSub = document.getElementById('auth-sub');
+    const switchText = document.getElementById('auth-switch-text');
+    const switchBtn = document.getElementById('switch-auth');
+    const loginError = document.getElementById('login-error');
+    const registerError = document.getElementById('register-error');
+    const recoverBox = document.getElementById('recover-box');
+    const recoverMsg = document.getElementById('recover-msg');
+    const rememberMe = document.getElementById('remember-me');
+    const strengthBox = document.querySelector('#register-form .vp-strength');
+    const strengthLabel = document.querySelector('#register-form .vp-strength-label');
+
+    const showAuth = () => { overlay.classList.remove('vp-hidden'); document.body.style.overflow = 'hidden'; };
+    const hideAuth = () => { overlay.classList.add('vp-hidden'); document.body.style.overflow = ''; document.getElementById('login-password').value = ''; document.getElementById('register-password').value = ''; };
+
+    const friendlyError = (error) => {
+      switch (error && error.code) {
+        case 'auth/invalid-email': return 'Escribe un correo electrónico válido.';
+        case 'auth/user-not-found': return 'No encontramos una cuenta con ese correo electrónico.';
+        case 'auth/wrong-password': return 'Contraseña incorrecta. Inténtalo de nuevo.';
+        case 'auth/invalid-credential': return 'Correo o contraseña incorrectos. Inténtalo de nuevo.';
+        case 'auth/email-already-in-use': return 'Este correo ya está registrado. Inicia sesión.';
+        case 'auth/weak-password': return 'La contraseña debe tener al menos 6 caracteres.';
+        case 'auth/too-many-requests': return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+        case 'auth/network-request-failed': return 'No pudimos conectar. Revisa tu internet e inténtalo de nuevo.';
+        case 'auth/user-disabled': return 'Esta cuenta está deshabilitada. Contacta a soporte.';
+        case 'auth/operation-not-allowed': return 'El registro con correo está deshabilitado. Contacta a soporte.';
+        case 'auth/invalid-api-key': return 'Error de configuración. Inténtalo más tarde.';
+        case 'auth/app-not-authorized': return 'Error de configuración. Inténtalo más tarde.';
+        default: return 'Ocurrió un error. Inténtalo de nuevo.';
+      }
+    };
+
+    const showError = (el, message) => { el.textContent = message; el.classList.add('visible'); };
+    const clearError = (el) => { el.textContent = ''; el.classList.remove('visible'); };
+
+    /* Validación inline: pinta el campo (is-invalid/is-valid) y escribe el <p class="vp-hint"> */
+    const setFieldState = (inputId, valid, message) => {
+      const input = document.getElementById(inputId);
+      const field = input.closest('.vp-field');
+      const hint = field ? field.querySelector('.vp-hint') : null;
+      if (field) {
+        field.classList.toggle('is-invalid', !valid);
+        field.classList.toggle('is-valid', valid && input.value.trim().length > 0);
+      }
+      if (hint) { hint.textContent = valid ? '' : message; }
+    };
+    const clearFieldState = (inputId) => {
+      const input = document.getElementById(inputId);
+      const field = input.closest('.vp-field');
+      const hint = field ? field.querySelector('.vp-hint') : null;
+      if (field) { field.classList.remove('is-invalid'); field.classList.remove('is-valid'); }
+      if (hint) { hint.textContent = ''; }
+    };
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValidEmail = (email) => EMAIL_RE.test(email);
+
+    /* Transición de vista: fade + desplazamiento al mostrar un formulario */
+    const enterView = (el) => {
+      el.classList.remove('vp-view-enter');
+      void el.offsetWidth; /* reflow para relanzar la animación */
+      el.classList.add('vp-view-enter');
+    };
+
+    const showLogin = () => {
+      loginBox.style.display = 'block';
+      registerBox.style.display = 'none';
+      authTitle.textContent = 'Iniciar sesión';
+      authSub.textContent = 'Tus animes favoritos te esperan.';
+      switchText.textContent = '¿Primera vez en VetPlex?';
+      switchBtn.textContent = 'Regístrate ahora.';
+      clearError(loginError);
+      recoverBox.hidden = true;
+      recoverMsg.textContent = '';
+      recoverMsg.classList.remove('ok');
+      enterView(loginBox);
+    };
+
+    const showRegister = () => {
+      loginBox.style.display = 'none';
+      registerBox.style.display = 'block';
+      authTitle.textContent = 'Regístrate';
+      authSub.textContent = 'Crea tu cuenta gratis y empieza a ver anime.';
+      switchText.textContent = '¿Ya tienes cuenta?';
+      switchBtn.textContent = 'Inicia sesión.';
+      clearError(registerError);
+      enterView(registerBox);
+    };
+
+    let registering = false;
+    switchBtn.addEventListener('click', () => {
+      registering = !registering;
+      if (registering) { showRegister(); } else { showLogin(); }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) { hideAuth(); } else { showAuth(); }
+    });
+
+    /* Estado de carga: clase .is-loading (spinner CSS) + botón deshabilitado */
+    const setLoading = (btn, loading) => {
+      btn.disabled = loading;
+      btn.classList.toggle('is-loading', loading);
+    };
+
+    document.getElementById('login-button').addEventListener('click', () => {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-button');
+      clearError(loginError);
+      clearFieldState('login-email');
+      clearFieldState('login-password');
+      let ok = true;
+      if (!email) { setFieldState('login-email', false, 'Escribe tu correo electrónico.'); ok = false; }
+      else if (!isValidEmail(email)) { setFieldState('login-email', false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); ok = false; }
+      else { setFieldState('login-email', true, ''); }
+      if (!password) { setFieldState('login-password', false, 'Escribe tu contraseña.'); ok = false; }
+      else { setFieldState('login-password', true, ''); }
+      if (!ok) return;
+      setLoading(btn, true);
+      /* "Recuérdame": persistencia local (sesión recordada) o solo de la sesión actual */
+      setPersistence(auth, rememberMe.checked ? browserLocalPersistence : browserSessionPersistence)
+        .then(() => signInWithEmailAndPassword(auth, email, password))
+        .then(() => { hideAuth(); })
+        .catch((error) => { showError(loginError, friendlyError(error)); })
+        .finally(() => { setLoading(btn, false); });
+    });
+
+    document.getElementById('register-button').addEventListener('click', () => {
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+      const btn = document.getElementById('register-button');
+      clearError(registerError);
+      clearFieldState('register-email');
+      clearFieldState('register-password');
+      let ok = true;
+      if (!email) { setFieldState('register-email', false, 'Escribe tu correo electrónico.'); ok = false; }
+      else if (!isValidEmail(email)) { setFieldState('register-email', false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); ok = false; }
+      else { setFieldState('register-email', true, ''); }
+      if (!password) { setFieldState('register-password', false, 'Escribe tu contraseña.'); ok = false; }
+      else if (password.length < 6) { setFieldState('register-password', false, 'La contraseña debe tener al menos 6 caracteres.'); ok = false; }
+      else { setFieldState('register-password', true, ''); }
+      if (!ok) return;
+      setLoading(btn, true);
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(() => sendEmailVerification(auth.currentUser))
+        .then(() => { hideAuth(); })
+        .catch((error) => { showError(registerError, friendlyError(error)); })
+        .finally(() => { setLoading(btn, false); });
+    });
+
+    /* Recuperación: estado visual propio (título + subtítulo + regreso).
+       La lógica Firebase (sendPasswordResetEmail) no se toca. */
+    const showRecover = () => {
+      recoverBox.hidden = false;
+      authTitle.textContent = 'Recupera tu contraseña';
+      authSub.textContent = 'Te enviamos un enlace para restablecerla.';
+      recoverMsg.textContent = '';
+      recoverMsg.classList.remove('ok');
+      enterView(recoverBox);
+    };
+    const hideRecover = () => {
+      recoverBox.hidden = true;
+      authTitle.textContent = 'Iniciar sesión';
+      authSub.textContent = 'Tus animes favoritos te esperan.';
+      recoverMsg.textContent = '';
+      recoverMsg.classList.remove('ok');
+    };
+    document.getElementById('forgot-password').addEventListener('click', () => {
+      if (recoverBox.hidden) { showRecover(); } else { hideRecover(); }
+    });
+    document.getElementById('recover-back').addEventListener('click', hideRecover);
+    /* Enter en el buscador: se enlaza cuando el DOM está listo (el input vive más abajo en el documento) */
+    const bindSearchEnter = () => {
+      const searchInputEl = document.getElementById('search-input');
+      if (searchInputEl && !searchInputEl.dataset.enterBound) {
+        searchInputEl.dataset.enterBound = '1';
+        searchInputEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); searchAnime(); }
+        });
+      }
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bindSearchEnter);
+    } else {
+      bindSearchEnter();
+    }
+
+    document.getElementById('recover-button').addEventListener('click', () => {
+      const email = document.getElementById('recover-email').value.trim();
+      const btn = document.getElementById('recover-button');
+      recoverMsg.classList.remove('ok');
+      clearFieldState('recover-email');
+      if (!email) { setFieldState('recover-email', false, 'Escribe tu correo electrónico.'); return; }
+      if (!isValidEmail(email)) { setFieldState('recover-email', false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); return; }
+      setFieldState('recover-email', true, '');
+      setLoading(btn, true);
+      sendPasswordResetEmail(auth, email)
+        .then(() => {
+          recoverMsg.textContent = 'Listo. Revisa tu correo, te enviamos el enlace de recuperación.';
+          recoverMsg.classList.add('ok');
+        })
+        .catch((error) => { recoverMsg.textContent = friendlyError(error); })
+        .finally(() => { setLoading(btn, false); });
+    });
+
+    const enterPairs = [['login-email', 'login-button'], ['login-password', 'login-button'], ['register-email', 'register-button'], ['register-password', 'register-button'], ['recover-email', 'recover-button']];
+    enterPairs.forEach((pair) => {
+      document.getElementById(pair[0]).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { document.getElementById(pair[1]).click(); }
+      });
+    });
+
+    /* Ojo mostrar/ocultar contraseña (el ojo está dibujado en CSS; el JS alterna type + estado) */
+    document.querySelectorAll('#overlay .vp-pw-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const input = toggle.closest('.vp-field').querySelector('input');
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        toggle.classList.toggle('is-off', !show);
+        toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      });
+    });
+
+    /* Medidor de fuerza: 0 vacío, 1 débil, 2 aceptable, 3 buena, 4 fuerte */
+    const STRENGTH_LABELS = ['', 'Contraseña débil', 'Aceptable', 'Buena', 'Fuerte'];
+    const strengthInput = document.getElementById('register-password');
+    strengthInput.addEventListener('input', () => {
+      const pw = strengthInput.value;
+      let level = 0;
+      if (pw.length > 0) {
+        level = 1;
+        if (pw.length >= 8) level++;
+        if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) level++;
+        if (/\d/.test(pw)) level++;
+        if (/[^A-Za-z0-9]/.test(pw) || pw.length >= 12) level++;
+        level = Math.min(level, 4);
+      }
+      strengthBox.setAttribute('data-level', String(level));
+      strengthLabel.textContent = level > 0 ? STRENGTH_LABELS[level] : 'Usa 8+ caracteres con letras y números.';
+    });
+
+    showLogin();
+  </script>
+</head>
+
+<body>
+  <div id="overlay">
+    <div class="vp-auth-bg" aria-hidden="true">
+      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/01ec367b44f0a568430a957e042639af.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/0a34f193aa46a27cd75f5ee553834c41.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/18638d44e180fd1b51870106b88e46e4.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/3b70d9f3c112faa30940bcc26f1cff98.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/6533e54a54f7a69c806920607bc8238e.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://images.justwatch.com/poster/261483319/s718/boku-no-hero-academy.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://m.media-amazon.com/images/M/MV5BNzEzZjljMzAtNjJmMi00MTg3LTg1MDEtYWRiZWE4MjNlZTZlXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="" loading="eager" fetchpriority="high">
+      <img src="https://m.media-amazon.com/images/M/MV5BOTBhOTlkNDctMDg1Zi00MGViLWJhMTUtMTU1OWEyYTUzZjdhXkEyXkFqcGdeQXVyNzAwMjU2MTY@._V1_FMjpg_UX1000_.jpg" alt="" loading="eager" fetchpriority="high">
+      <div class="vp-auth-shade"></div>
+    </div>
+    <div class="vp-auth-scroll">
+    <div id="auth-container">
+      <!-- FIX: wordmark dentro de la tarjeta. La barra superior separada
+           (.vp-auth-top) se confundia visualmente con el encabezado del sitio;
+           el overlay ya cubre todo el viewport (fixed, inset:0, z-index:10000). -->
+      <span class="vp-logo">VETPLEX</span>
+      <h1 class="vp-auth-title" id="auth-title">Iniciar sesi&oacute;n</h1>
+      <p class="vp-auth-sub" id="auth-sub">Tus animes favoritos te esperan.</p>
+
+      <div id="login-form">
+        <div class="vp-field">
+          <input type="email" id="login-email" placeholder="Correo electr&oacute;nico" autocomplete="email" maxlength="254">
+          <p class="vp-hint"></p>
+        </div>
+        <div class="vp-field has-toggle">
+          <input type="password" id="login-password" placeholder="Contrase&ntilde;a" autocomplete="current-password" maxlength="128">
+          <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
+          <p class="vp-hint"></p>
+        </div>
+        <p class="vp-error" id="login-error" role="alert"></p>
+        <button type="button" id="login-button" class="vp-btn-primary">Iniciar sesi&oacute;n</button>
+        <div class="vp-opts">
+          <label class="vp-remember"><input type="checkbox" id="remember-me" checked> Recu&eacute;rdame</label>
+          <button type="button" id="forgot-password" class="vp-link">&iquest;Necesitas ayuda?</button>
+        </div>
+        <div class="vp-recover" id="recover-box" hidden>
+          <h2 class="vp-recover-title">Recupera tu contrase&ntilde;a</h2>
+          <p class="vp-recover-sub">Escribe tu correo y te enviamos un enlace para restablecerla.</p>
+          <div class="vp-field">
+            <input type="email" id="recover-email" placeholder="Correo electr&oacute;nico para recuperar" maxlength="254">
+            <p class="vp-hint"></p>
+          </div>
+          <button type="button" id="recover-button" class="vp-btn-ghost">Enviar enlace de recuperaci&oacute;n</button>
+          <p class="vp-note" id="recover-msg" role="alert"></p>
+          <button type="button" id="recover-back" class="vp-link vp-back">&larr; Volver a iniciar sesi&oacute;n</button>
+        </div>
+      </div>
+
+      <div id="register-form" style="display:none;">
+        <div class="vp-field">
+          <input type="email" id="register-email" placeholder="Correo electr&oacute;nico" autocomplete="email" maxlength="254">
+          <p class="vp-hint"></p>
+        </div>
+        <div class="vp-field has-toggle">
+          <input type="password" id="register-password" placeholder="Contrase&ntilde;a (m&iacute;nimo 6 caracteres)" autocomplete="new-password" maxlength="128">
+          <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
+          <p class="vp-hint"></p>
+        </div>
+        <div class="vp-strength" data-level="0">
+          <div class="vp-strength-bar"><span></span><span></span><span></span><span></span></div>
+          <p class="vp-strength-label">Usa 8+ caracteres con letras y n&uacute;meros.</p>
+        </div>
+        <p class="vp-error" id="register-error" role="alert"></p>
+        <button type="button" id="register-button" class="vp-btn-primary">Registrarse</button>
+      </div>
+
+      <p class="vp-switch"><span id="auth-switch-text">&iquest;Primera vez en VetPlex?</span> <button type="button" id="switch-auth" class="vp-link-strong">Reg&iacute;strate ahora.</button></p>
+    </div>
+    </div>
+  </div>
+
+</body>
+
+</html>
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>VetPlex — Plataforma de anime</title>
+
+</head>
+
+<body>
+  <!-- partial:index.partial.html -->
+  <!DOCTYPE html>
+  <html lang="es">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VetPlex - Notificaciones y Configuraciones</title>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        background-color: #1c1c1c;
+        /* Fondo oscuro */
+        color: #ffffff;
+        /* Color de texto blanco */
+        margin: 0;
+        padding: 0;
+        line-height: 1.5;
+      }
+
+      #notification-blocker {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        /* Fondo semi-transparente */
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .notification-content {
+        background-color: #252525;
+        /* Fondo del contenido */
+        padding: 20px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 450px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+        text-align: center;
+        position: relative;
+        animation: fadeIn 0.5s ease-in-out;
+      }
+
+      h1 {
+        font-size: 1.8em;
+        color: #f5c518;
+        /* Color amarillo para el título */
+        margin-bottom: 15px;
+      }
+
+      h2 {
+        font-size: 1.4em;
+        margin: 15px 0;
+        color: #e50914;
+        /* Color rojo para subtítulos */
+      }
+
+      p {
+        font-size: 1em;
+        color: #cccccc;
+        /* Color gris claro para el texto */
+        margin-bottom: 15px;
+      }
+
+      .version {
+        font-size: 1.2em;
+        color: #f5c518;
+        /* Color amarillo para la versión */
+      }
+
+      .btn {
+        background-color: #f5c518;
+        /* Botón amarillo */
+        color: #000000;
+        /* Texto negro en el botón */
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: background-color 0.3s;
+        width: 100%;
+        font-size: 1em;
+      }
+
+      .btn:hover {
+        background-color: #e0a812;
+        /* Color más oscuro al pasar el mouse */
+      }
+
+      #shortcut {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background: url('https://cdn-icons-png.flaticon.com/512/3097/3097687.png') no-repeat center center;
+        background-size: contain;
+        cursor: pointer;
+        z-index: 1001;
+      }
+
+      #settings {
+        margin-top: 20px;
+      }
+
+      .privacy-option {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 10px 0;
+      }
+
+      .privacy-option label {
+        font-size: 1em;
+      }
+
+      #report-form {
+        margin-top: 20px;
+        display: none;
+        /* Se oculta hasta que el usuario lo abra */
+      }
+
+      #warning-message {
+        color: #ffcc00;
+        margin-top: 10px;
+        display: none;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Atajo para abrir la notificación -->
+    <div id="shortcut" title="Verificar anime preferido"></div>
+
+    <!-- Pantalla de bloqueo con notificación -->
+    <div id="notification-blocker">
+      <div class="notification-content">
+        <h1>¡Atención, usuarios de VetPlex!</h1>
+        <p id="notification-message">
+          Nos complace anunciar que la versión <span class="version">2.0</span> ya está disponible. ¡Explora el catálogo y disfruta tu anime favorito!
+        </p>
+
+        <!-- Formulario de reporte -->
+        <div id="report-form">
+          <h2>Reportar Problema</h2>
+          <p>Selecciona el problema que estás experimentando:</p>
+          <select id="problem-type">
+            <option value="video-calidad">Problema con la calidad del video</option>
+            <option value="audio-sincronizacion">Problema de sincronización de audio</option>
+            <option value="error-carga">Error al cargar el capítulo</option>
+            <option value="otro">Otro problema</option>
+          </select>
+
+          <button class="btn" id="submit-report">Enviar Reporte</button>
+          <p id="warning-message">No todos los reportes son procesados de inmediato. Haremos lo posible por revisarlo lo más pronto posible.</p>
+        </div>
+
+        <!-- Botón para aceptar y cerrar la notificación -->
+        <button class="btn" id="accept-btn">Aceptar</button>
+
+        <!-- Botón para reportar problemas -->
+        <button class="btn" id="report-btn">Reportar Problema</button>
+      </div>
+    </div>
+
+    <script>
+      // Mostrar y ocultar la pantalla de bloqueo de notificación (todas las copias del bloque)
+      document.querySelectorAll('#shortcut').forEach(function(el) {
+        el.onclick = function() {
+          document.querySelectorAll('#notification-blocker').forEach(function(b) { b.style.display = 'flex'; });
+        };
+      });
+      document.querySelectorAll('#accept-btn').forEach(function(el) {
+        el.onclick = function() {
+          document.querySelectorAll('#notification-blocker').forEach(function(b) { b.style.display = 'none'; });
+        };
+      });
+      // Mostrar formulario de reporte al hacer clic en "Reportar Problema" (dentro de su propio bloque)
+      document.querySelectorAll('#report-btn').forEach(function(el) {
+        el.onclick = function() {
+          var block = el.closest('#notification-blocker');
+          var form = block ? block.querySelector('#report-form') : document.querySelector('#report-form');
+          if (form) form.style.display = 'block';
+        };
+      });
+      // Enviar el reporte y mostrar advertencia (dentro de su propio bloque)
+      document.querySelectorAll('#submit-report').forEach(function(el) {
+        el.onclick = function() {
+          var block = el.closest('#notification-blocker');
+          var warn = block ? block.querySelector('#warning-message') : document.querySelector('#warning-message');
+          if (warn) warn.style.display = 'block';
+        };
+      });
+    </script>
+  </body>
+
+  </html>
+      
+  
+  
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VetPlex</title>
+  <style>
+    body {
+      background-color: #141414;
+      color: white;
+      font-family: 'Arial', sans-serif;
+      overflow-x: hidden;
+      margin: 0;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background-color: #000;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #FFD700;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 300px;
+    }
+
+    .search-input {
+      padding: 5px;
+      border: none;
+      border-radius: 4px;
+      width: 120px;
+      margin-right: 5px;
+      max-width: 100%;
+    }
+
+    .search-icon {
+      width: 30px;
+      height: auto;
+      cursor: pointer;
+    }
+
+    .banner {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      overflow: hidden;
+    }
+
+    .banner-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .banner-content {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+    }
+
+    .banner-title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #FFD700;
+    }
+
+    .banner-description {
+      margin: 10px 0;
+      color: #e0e0e0;
+    }
+
+    .banner-buttons {
+      margin-top: 10px;
+    }
+
+    .banner-button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #e50914;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+
+    .carousel-container {
+      margin: 20px;
+    }
+
+    .carousel-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.2px;
+      margin: 18px 16px 6px;
+      padding-bottom: 0;
+      border-bottom: none;
+      text-transform: none;
+    }
+
+    .carousel {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .carousel-item {
+      min-width: 150px;
+      margin-right: 10px;
+      background-color: #333;
+      padding: 10px;
+      border-radius: 4px;
+      scroll-snap-align: start;
+    }
+
+    /* Catálogo de la plataforma: riel horizontal estilo app de streaming */
+    .vp-rail {
+      gap: 12px;
+      padding: 6px 16px 16px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .vp-rail::-webkit-scrollbar { display: none; }
+    .vp-card {
+      flex: 0 0 auto;
+      width: 132px;
+      scroll-snap-align: start;
+      cursor: pointer;
+    }
+    .vp-card img {
+      width: 132px;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 10px;
+      background: #222;
+      display: block;
+    }
+    .vp-card h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      margin: 8px 2px 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vp-card p {
+      font-size: 12px;
+      color: #9a9aa3;
+      margin: 0 2px;
+    }
+    .vp-empty {
+      color: #9a9aa3;
+      font-size: 14px;
+      padding: 24px 16px;
+      text-align: center;
+      flex: 0 0 100%;
+    }
+
+    html, body {
+      overscroll-behavior: none;
+      touch-action: pan-y;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #222;
+      padding: 20px;
+      border-radius: 8px;
+      width: 400px;
+      color: white;
+    }
+
+    .close {
+      cursor: pointer;
+    }
+
+    .vote-animation {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: #FFD700;
+      z-index: 2000;
+      animation: fadeIn 0.5s, fadeOut 0.5s 1.5s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">VetPlex</div>
+    <div class="search-bar">
+      <button type="button" class="search-icon-btn" onclick="searchAnime()" aria-label="Buscar">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M21 21l-4.3-4.3"></path>
+        </svg>
+      </button>
+      <input type="text" class="search-input" id="search-input" placeholder="Buscar anime..." autocomplete="off" enterkeyhint="search" aria-label="Buscar anime">
+    </div>
+  </header>
+
+  <div class="banner">
+    <img src="https://www.syfy.com/sites/syfy/files/blog-images/shieldhero.jpg" alt="Gintama" class="banner-image">
+    <div class="banner-content">
+      <div class="banner-title">The Rising of the Shield Hero</div>
+      <div class="banner-description">Héroe del escudo lucha en mundo paralelo contra monstruos interdimensionales</div>
+      <div class="banner-buttons">
+        <button class="banner-button" onclick="showModal('Anime Destacado', 'Un hombre equipado solo con un escudo es elegido para ser uno de los grandes defensores del mundo, pero cuando una traición destroza su reputación, intenta recuperar la confianza del público luchando contra el mal junto a unos pocos leales.', '2019')">Ver Detalles</button>
+        <button class="banner-button" onclick="addToList('Anime Destacado')">Añadir a Lista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catálogo de animes (se llena desde Firebase; oculto si no hay datos) -->
+  <div class="carousel-container" id="vp-catalogo-wrap">
+    <div class="carousel-title">Animes</div>
+    <div class="carousel vp-rail" id="vp-catalogo"><p class="vp-empty">Cargando catálogo…</p></div>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modal-title"></h2>
+      <p id="modal-description"></p>
+      <p id="modal-year"></p>
+      <div id="modal-vote">
+        <span>Califica:</span>
+        <button onclick="vote('like')">Bueno</button>
+        <button onclick="vote('dislike')">Malo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="vote-message" class="vote-animation">Gracias por tu voto!</div>
+
+  <!-- Agregar el SDK de Firebase -->
+  <script type="module">
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+    // Tu configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
+      authDomain: "vetplex-animes.firebaseapp.com",
+      databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
+      projectId: "vetplex-animes",
+      storageBucket: "vetplex-animes.appspot.com",
+      messagingSenderId: "485618641909",
+      appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
+      measurementId: "G-3QGGL7CWQ0"
+    };
+
+    // Inicializar Firebase (una sola app compartida entre módulos)
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const auth = getAuth(app);
+    // UID real del usuario logueado (antes era "user123" fijo para todos)
+    const currentUid = () => (auth.currentUser && auth.currentUser.uid) || 'anon';
+
+    // Función para mostrar el modal
+    function showModal(title, description, year) {
+      document.getElementById("modal-title").innerText = title;
+      document.getElementById("modal-description").innerText = description;
+      document.getElementById("modal-year").innerText = year;
+      document.getElementById("modal").style.display = "flex";
+    }
+
+    // Función para cerrar el modal
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+    }
+
+    // Función para agregar a la lista
+    function addToList(anime) {
+      push(ref(database, 'users/' + currentUid() + '/list'), {
+        name: anime,
+        added: true,
+        ts: Date.now()
+      }).then(() => {
+        const el = document.getElementById("vote-message");
+        el.textContent = anime + " añadido a tu lista.";
+        el.style.display = "block";
+        setTimeout(() => { el.style.display = "none"; }, 2000);
+      });
+    }
+
+    // Función para buscar anime
+    function searchAnime() {
+      const input = document.getElementById("search-input").value;
+      // Lógica para buscar anime (puedes implementar esto según tus necesidades)
+      alert("Buscando anime: " + input);
+    }
+
+    // Función para votar
+    function vote(type) {
+      const animeTitle = document.getElementById("modal-title").innerText;
+      push(ref(database, 'votes/' + currentUid()), {
+        anime: animeTitle,
+        type: type,
+        timestamp: Date.now()
+      }).then(() => {
+        showVoteMessage();
+      });
+    }
+
+    // Función para mostrar el mensaje de agradecimiento por el voto
+    function showVoteMessage() {
+      const messageElement = document.getElementById("vote-message");
+      messageElement.textContent = "Gracias por tu voto!";
+      messageElement.style.display = "block";
+      setTimeout(() => {
+        messageElement.style.display = "none";
+      }, 2000);
+    }
+
+    // Los botones usan onclick="...": las funciones de un módulo no son
+    // globales, así que se exponen explícitamente en window.
+    window.showModal = showModal;
+    window.closeModal = closeModal;
+    window.addToList = addToList;
+    window.vote = vote;
+  </script>
+</body>
+</html>
+
+
+   
+  
+  <!DOCTYPE html>
+  <html lang="es">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VetPlex - Publicar Anime</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #141414;
+        color: #fff;
+        margin: 0;
+        padding: 20px;
+        transition: background-color 0.5s;
+      }
+
+      h1 {
+        text-align: center;
+        animation: fadeIn 1s;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      #header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      form {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: slideIn 0.5s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-20px);
+          opacity: 0;
+        }
+
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      input[type="text"],
+      input[type="number"],
+      input[type="search"],
+      select,
+      textarea {
+        margin: 10px;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        width: 300px;
+        transition: transform 0.2s;
+      }
+
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      select:focus,
+      textarea:focus {
+        transform: scale(1.02);
+        outline: none;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #e50914;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      button:hover {
+        background-color: #f40612;
+      }
+
+      .carousel {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 10px;
+        padding: 10px 0;
+      }
+
+      .anime-card {
+        flex: 0 0 auto;
+        width: 200px;
+        background-color: #222;
+        border-radius: 5px;
+        position: relative;
+        cursor: pointer;
+        scroll-snap-align: start;
+        padding: 10px;
+        transition: transform 0.3s;
+      }
+
+      .anime-card:hover {
+        transform: scale(1.05);
+      }
+
+      .anime-card img {
+        width: 100%;
+        height: auto;
+        border-radius: 5px;
+      }
+
+      .rating {
+        margin-top: 10px;
+      }
+
+      .anime-info {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.8);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .info-content {
+        background-color: #333;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        color: #fff;
+        position: relative;
+        animation: fadeIn 0.5s;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        color: red;
+        font-size: 20px;
+      }
+
+      .error {
+        color: red;
+        text-align: center;
+      }
+
+      .success {
+        color: green;
+        text-align: center;
+      }
+
+      .report-form {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="header">
+      <h1>Animes Publicados por Usuarios</h1>
+
+    </div>
+    <form id="animeForm">
+      <input type="text" id="title" placeholder="Título del Anime" required>
+      <input type="number" id="year" placeholder="Año de Estreno" required>
+      <input type="text" id="synopsis" placeholder="Sinopsis" required>
+      <input type="text" id="imageUrl" placeholder="URL de la Imagen" required>
+      <button type="submit">Publicar Anime</button>
+      <div class="error" id="error"></div>
+      <div class="success" id="success"></div>
+    </form>
+
+    <h2>Animes Publicados</h2>
+    <div class="carousel" id="animeCarousel"></div>
+
+    <div class="anime-info" id="animeInfo">
+      <div class="info-content" id="infoContent">
+        <span class="close-btn" id="closeBtn">✖</span>
+        <h3 id="infoTitle"></h3>
+        <p id="infoYear"></p>
+        <p id="infoSynopsis"></p>
+        <div class="rating">
+          <h4>Califica este anime:</h4>
+          <span id="starRating">
+            <i class="fas fa-star" data-value="1"></i>
+            <i class="fas fa-star" data-value="2"></i>
+            <i class="fas fa-star" data-value="3"></i>
+            <i class="fas fa-star" data-value="4"></i>
+            <i class="fas fa-star" data-value="5"></i>
+          </span>
+          <div class="success" id="ratingSuccess"></div>
+        </div>
+
+        <!-- Formulario de reporte -->
+        <div class="report-form">
+          <h4>Reportar Anime</h4>
+          <input type="text" id="telegramUser" placeholder="Nombre de usuario en Telegram" required>
+          <select id="reportReason" required>
+            <option value="">Selecciona un motivo</option>
+            <option value="Error en el episodio">Error en el episodio</option>
+            <option value="Problemas de sincronización">Problemas de sincronización</option>
+            <option value="Mala calidad">Mala calidad</option>
+            <option value="Otros">Otros</option>
+          </select>
+          <textarea id="customReason" placeholder="Escribe el motivo del reporte si seleccionaste 'Otros'" rows="4"></textarea>
+          <button id="reportBtn">Enviar Reporte</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {
+        initializeApp,
+        getApps,
+        getApp
+      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        set,
+        onValue,
+        push
+      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+      const firebaseConfig = {
+        apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
+        authDomain: "vetplex-animes.firebaseapp.com",
+        projectId: "vetplex-animes",
+        storageBucket: "vetplex-animes.appspot.com",
+        messagingSenderId: "485618641909",
+        appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
+        measurementId: "G-3QGGL7CWQ0",
+        databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
+      };
+      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      const animeForm = document.getElementById('animeForm');
+      const animeCarousel = document.getElementById('animeCarousel');
+      const catalogo = document.getElementById('vp-catalogo');
+      const catalogoWrap = document.getElementById('vp-catalogo-wrap');
+      const successDiv = document.getElementById('success');
+      const errorDiv = document.getElementById('error');
+      const closeBtn = document.getElementById('closeBtn');
+      const animeInfo = document.getElementById('animeInfo');
+      const ratingSuccessDiv = document.getElementById('ratingSuccess');
+      const starRating = document.getElementById('starRating');
+      const reportBtn = document.getElementById('reportBtn');
+      const telegramUserInput = document.getElementById('telegramUser');
+      const reportReasonSelect = document.getElementById('reportReason');
+      const customReasonTextarea = document.getElementById('customReason');
+      let currentAnime; // Variable para almacenar el anime seleccionado
+      // Publicar Anime
+      animeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = document.getElementById('title').value;
+        const year = document.getElementById('year').value;
+        const synopsis = document.getElementById('synopsis').value;
+        const imageUrl = document.getElementById('imageUrl').value;
+        // Validación de los campos
+        if (!title || !year || !synopsis || !imageUrl) {
+          errorDiv.textContent = "Por favor completa todos los campos.";
+          return;
+        }
+        errorDiv.textContent = ""; // Limpiar mensajes de error
+        const animeData = {
+          title,
+          year,
+          synopsis,
+          imageUrl
+        };
+        const newAnimeRef = push(ref(database, 'animes'));
+        set(newAnimeRef, animeData)
+          .then(() => {
+            successDiv.textContent = "Anime publicado con éxito.";
+            displayAnimes(); // Actualizar la lista de animes
+            animeForm.reset(); // Limpiar el formulario
+          })
+          .catch((error) => {
+            console.error("Error al publicar el anime:", error);
+            errorDiv.textContent = "Error al publicar el anime.";
+          });
+      });
+      // Mostrar Animes
+      // Póster de respaldo (SVG inline): si un póster falla, se conserva la tarjeta con título y año
+      const POSTER_FALLBACK = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450"><rect width="300" height="450" fill="#1a1d29"/><text x="150" y="225" fill="#8b93b8" font-family="sans-serif" font-size="22" text-anchor="middle">VetPlex</text></svg>'
+      );
+      let catalogLoaded = false; // true cuando onValue o el respaldo REST ya pintaron el catálogo
+      function renderAnimeList(animes) {
+        animeCarousel.innerHTML = ""; // Limpiar la lista antes de volver a cargar
+        if (catalogo) catalogo.innerHTML = "";
+        let catalogCount = 0;
+        animes.forEach((anime) => {
+          if (!anime) return;
+          const animeCard = document.createElement('div');
+          animeCard.className = 'anime-card';
+          animeCard.innerHTML = `
+            <img src="${anime.imageUrl}" alt="${anime.title}">
+            <h3>${anime.title}</h3>
+            <p>${anime.year}</p>
+          `;
+          animeCard.addEventListener('click', () => showAnimeInfo(anime));
+          animeCarousel.appendChild(animeCard);
+          // Tarjeta del catálogo de la plataforma (misma data de Firebase)
+          if (catalogo) {
+            const card = document.createElement('article');
+            card.className = 'vp-card';
+            const img = document.createElement('img');
+            img.src = anime.imageUrl;
+            img.alt = anime.title;
+            img.loading = 'lazy';
+            img.onerror = () => { img.onerror = null; img.src = POSTER_FALLBACK; };
+            const h3 = document.createElement('h3');
+            h3.textContent = anime.title;
+            const p = document.createElement('p');
+            p.textContent = anime.year || '';
+            card.append(img, h3, p);
+            card.addEventListener('click', () => {
+              if (window.showModal) window.showModal(anime.title, anime.synopsis, anime.year);
+            });
+            catalogo.appendChild(card);
+            catalogCount++;
+          }
+        });
+        // Mostrar la sección siempre; si no hay animes, mensaje visible
+        if (catalogoWrap) {
+          catalogoWrap.hidden = false;
+          if (catalogCount === 0 && catalogo) catalogo.innerHTML = '<p class="vp-empty">Aún no hay animes publicados.</p>';
+        }
+        catalogLoaded = true;
+      }
+      function displayAnimes() {
+        catalogLoaded = false;
+        const animesRef = ref(database, 'animes');
+        onValue(animesRef, (snapshot) => {
+          const animes = [];
+          snapshot.forEach((childSnapshot) => { animes.push(childSnapshot.val()); });
+          renderAnimeList(animes);
+        }, (err) => {
+          // Si el respaldo REST ya pintó el catálogo, no pisarlo con el error
+          if (catalogLoaded) return;
+          if (catalogoWrap) {
+            catalogoWrap.hidden = false;
+            if (catalogo) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
+          }
+        });
+        // Respaldo: si onValue no responde en 10s (redes que bloquean el canal
+        // realtime de Firebase), cargar por REST directo y pintar el catálogo igual.
+        setTimeout(() => {
+          if (catalogLoaded) return;
+          fetch('https://vetplex-animes-default-rtdb.firebaseio.com/animes.json')
+            .then((r) => { if (!r.ok) throw new Error('REST ' + r.status); return r.json(); })
+            .then((data) => {
+              if (catalogLoaded || !data) return;
+              renderAnimeList(Object.values(data));
+            })
+            .catch(() => {
+              if (catalogLoaded) return;
+              if (catalogoWrap) {
+                catalogoWrap.hidden = false;
+                if (catalogo && !catalogo.children.length) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
+              }
+            });
+        }, 10000);
+      }
+      // Mostrar información del anime
+      function showAnimeInfo(anime) {
+        currentAnime = anime; // Guardar anime actual
+        document.getElementById('infoTitle').textContent = anime.title;
+        document.getElementById('infoYear').textContent = anime.year;
+        document.getElementById('infoSynopsis').textContent = anime.synopsis;
+        animeInfo.style.display = 'flex';
+      }
+      // Cerrar información del anime
+      closeBtn.addEventListener('click', () => {
+        animeInfo.style.display = 'none';
+        resetRating();
+      });
+      // Calificar anime
+      starRating.addEventListener('click', (e) => {
+        if (e.target.matches('.fas.fa-star')) {
+          const rating = e.target.getAttribute('data-value');
+          ratingSuccessDiv.textContent = `Has calificado este anime con ${rating} estrellas.`;
+          resetRating();
+        }
+      });
+      // Resetear la calificación
+      function resetRating() {
+        const stars = starRating.querySelectorAll('.fas.fa-star');
+        stars.forEach(star => {
+          star.classList.remove('selected');
+        });
+        ratingSuccessDiv.textContent = "";
+      }
+      // Enviar reporte
+      reportBtn.addEventListener('click', () => {
+        const telegramUser = telegramUserInput.value;
+        const reportReason = reportReasonSelect.value;
+        const customReason = customReasonTextarea.value;
+        if (!telegramUser || !reportReason) {
+          alert("Por favor completa todos los campos requeridos.");
+          return;
+        }
+        const reportData = {
+          telegramUser,
+          reportReason,
+          customReason: customReason || "N/A",
+          animeTitle: currentAnime.title
+        };
+        // Aquí puedes enviar los datos del reporte a tu base de datos o servidor
+        console.log("Reporte enviado:", reportData);
+        alert("Reporte enviado con éxito.");
+        telegramUserInput.value = "";
+        reportReasonSelect.value = "";
+        customReasonTextarea.value = "";
+      });
+      // Búsqueda de anime
+      function searchAnime() {
+        const input = document.getElementById('search-input');
+        const q = (input ? input.value : '').toLowerCase().trim();
+        document.querySelectorAll('.anime-card, .vp-card').forEach(card => {
+          const h3 = card.querySelector('h3');
+          const title = h3 ? h3.textContent.toLowerCase() : '';
+          card.style.display = title.includes(q) ? '' : 'none';
+        });
+      }
+      // El botón y la tecla Enter usan searchAnime(): exponerla globalmente
+      // (las funciones de un módulo no son visibles para onclick).
+      window.searchAnime = searchAnime;
+      // Cargar animes al iniciar
+      displayAnimes();
+    </script>
+  </body>
+
+  </html>
+
+  <!DOCTYPE html>
+  <html lang="es">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animación de Brujas de Halloween</title>
+      </head>
+
+  <body>
+
+
+  </body>
+
+  </html>
+
+  <!DOCTYPE html>
+  <html lang="es">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VetPlex - Notificaciones y Configuraciones</title>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        background-color: #1c1c1c;
+        color: #ffffff;
+        margin: 0;
+        padding: 0;
+        line-height: 1.5;
+      }
+
+      #notification-blocker {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .notification-content {
+        background-color: #252525;
+        padding: 20px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 450px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+        text-align: center;
+        position: relative;
+        animation: fadeIn 0.5s ease-in-out;
+      }
+
+      h1 {
+        font-size: 1.8em;
+        color: #f5c518;
+        margin-bottom: 15px;
+      }
+
+      h2 {
+        font-size: 1.4em;
+        margin: 15px 0;
+        color: #e50914;
+      }
+
+      p {
+        font-size: 1em;
+        color: #cccccc;
+        margin-bottom: 15px;
+      }
+
+      .version {
+        font-size: 1.2em;
+        color: #f5c518;
+      }
+
+      .btn {
+        background-color: #f5c518;
+        color: #000000;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: background-color 0.3s;
+        width: 100%;
+        font-size: 1em;
+      }
+
+      .btn:hover {
+        background-color: #e0a812;
+      }
+
+      #shortcut {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background: url('https://cdn-icons-png.flaticon.com/512/3097/3097687.png') no-repeat center center;
+        background-size: contain;
+        cursor: pointer;
+        z-index: 1001;
+      }
+
+      #report-form {
+        margin-top: 20px;
+        display: none;
+      }
+
+      #warning-message {
+        color: #ffcc00;
+        margin-top: 10px;
+        display: none;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
+    <script type="module">
+      // Importar las funciones necesarias de Firebase
+      import {
+        initializeApp,
+        getApps,
+        getApp
+      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        set
+      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+      // Configuración de Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
+        authDomain: "vetplex-animes.firebaseapp.com",
+        databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
+        projectId: "vetplex-animes",
+        storageBucket: "vetplex-animes.appspot.com",
+        messagingSenderId: "485618641909",
+        appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
+        measurementId: "G-3QGGL7CWQ0"
+      };
+      // Inicializar Firebase
+      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      // Función para enviar el reporte a Firebase
+      function sendReport(problemType) {
+        const reportRef = ref(database, 'reports/' + Date.now());
+        set(reportRef, {
+          problemType: problemType,
+          timestamp: new Date().toISOString()
+        });
+      }
+      // Mostrar y ocultar la pantalla de bloqueo de notificación (todas las copias del bloque)
+      document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('#shortcut').forEach(function(el) {
+          el.onclick = function() {
+            document.querySelectorAll('#notification-blocker').forEach(function(b) { b.style.display = 'flex'; });
+          };
+        });
+        document.querySelectorAll('#accept-btn').forEach(function(el) {
+          el.onclick = function() {
+            document.querySelectorAll('#notification-blocker').forEach(function(b) { b.style.display = 'none'; });
+          };
+        });
+        document.querySelectorAll('#report-btn').forEach(function(el) {
+          el.onclick = function() {
+            var block = el.closest('#notification-blocker');
+            var form = block ? block.querySelector('#report-form') : document.querySelector('#report-form');
+            if (form) form.style.display = 'block';
+          };
+        });
+        // Enviar el reporte a Firebase y mostrar advertencia (dentro de su propio bloque)
+        document.querySelectorAll('#submit-report').forEach(function(el) {
+          el.onclick = function() {
+            var block = el.closest('#notification-blocker');
+            var typeSel = block ? block.querySelector('#problem-type') : document.querySelector('#problem-type');
+            var warn = block ? block.querySelector('#warning-message') : document.querySelector('#warning-message');
+            if (typeSel) sendReport(typeSel.value);
+            if (warn) warn.style.display = 'block';
+          };
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <!-- Atajo para abrir la notificación -->
+    <div id="shortcut" title="Verificar anime preferido"></div>
+
+    <!-- Pantalla de bloqueo con notificación -->
+    <div id="notification-blocker">
+      <div class="notification-content">
+        <h1>¡Atención, usuarios de VetPlex!</h1>
+        <p id="notification-message">
+          Nos complace anunciar que la versión <span class="version">2.0</span> ya está disponible. ¡Explora el catálogo y disfruta tu anime favorito!
+        </p>
+
+        <!-- Formulario de reporte -->
+        <div id="report-form">
+          <h2>Reportar Problema</h2>
+          <p>Selecciona el problema que estás experimentando:</p>
+          <select id="problem-type">
+            <option value="video-calidad">Problema con la calidad del video</option>
+            <option value="audio-sincronizacion">Problema de sincronización de audio</option>
+            <option value="error-carga">Error al cargar el capítulo</option>
+            <option value="otro">Otro problema</option>
+          </select>
+
+          <button class="btn" id="submit-report">Enviar Reporte</button>
+          <p id="warning-message">No todos los reportes son procesados de inmediato. Haremos lo posible por revisarlo lo más pronto posible.</p>
+        </div>
+
+        <!-- Botón para aceptar y cerrar la notificación -->
+        <button class="btn" id="accept-btn">Aceptar</button>
+
+        <!-- Botón para reportar problemas -->
+        <button class="btn" id="report-btn">Reportar Problema</button>
+      </div>
+    </div>
+  </body>
+
+  </html>
+
+    <!DOCTYPE html>
+  <html lang="es">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrusel de Anime</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #111;
+        color: #fff;
+        margin: 0;
+        padding: 0;
+      }
+
+      .section-title {
+        text-align: center;
+        margin: 20px 0;
+        font-size: 24px;
+        color: #fff;
+      }
+
+      .carousel-container {
+        position: relative;
+        max-width: 100%;
+        margin: 0 auto;
+        overflow: hidden;
+      }
+
+      .carousel {
+        display: flex;
+        overflow-x: scroll;
+        scroll-behavior: smooth;
+        gap: 10px;
+        padding: 10px;
+        scrollbar-width: none;
+        /* Oculta el scrollbar en Firefox */
+      }
+
+      .carousel::-webkit-scrollbar {
+        display: none;
+        /* Oculta el scrollbar en Webkit browsers */
+      }
+
+      .carousel-item {
+        position: relative;
+        min-width: 200px;
+        max-width: 200px;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: #222;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+
+      .carousel-item:hover {
+        transform: scale(1.05);
+      }
+
+      .carousel-item img {
+        width: 100%;
+        height: auto;
+        display: block;
+        box-sizing: border-box;
+        /* FIX: aire interno para que el arte del poster (ej. el titulo
+           "CHAINSAW MAN" pegado al borde de la imagen) no se vea cortado
+           por el borde redondeado de la tarjeta. */
+        padding: 4px;
+        background: #1b1b1b;
+      }
+
+      .carousel-item-content {
+        padding: 10px;
+        text-align: center;
+        color: #fff;
+        background: #333;
+      }
+
+      .title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+
+      .new-tag {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: red;
+        color: #fff;
+        font-weight: bold;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: #222;
+        padding: 20px;
+        border-radius: 10px;
+        width: 80%;
+        max-width: 500px;
+        color: #fff;
+        position: relative;
+      }
+
+      .modal-close {
+        cursor: pointer;
+        font-size: 20px;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: #fff;
+      }
+
+      .season-select {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .episode-list {
+        margin-top: 10px;
+        padding: 0;
+        list-style-type: none;
+      }
+
+      .episode-list li {
+        margin: 5px 0;
+      }
+
+      .episode-list a {
+        color: #00f;
+        text-decoration: none;
+      }
+
+      .episode-list a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="section-title">Octubre 2024</div>
+    <div class="carousel-container">
+      <div class="carousel">
+        <!-- Cada ítem del carrusel -->
+        <div class="carousel-item" data-info='{"title":"KamiErabi GOD.app","date":"3 de julio de 2024","rating":"65%","synopsis":"KamiErabi God.app es una serie de televisión de anime japonesa. Fue creada por Yoko Taro, producida por Unend y dirigida por Hiroyuki Seshita, la serie se emitirá en el bloque de programación +Ultra de Fuji TV en octubre a diciembre de 2023. "}'>
+          <div class="new-tag">Al 65% le gustó este programa de TV</div>
+          <img src="https://m.media-amazon.com/images/M/MV5BNzEzZjljMzAtNjJmMi00MTg3LTg1MDEtYWRiZWE4MjNlZTZlXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Oshi no Ko">
+          <div class="carousel-item-content">
+            <div class="title">Oshi no Ko</div>
+          </div>
+        </div>
+        <div class="carousel-item" data-info='{"title":"Tokidoki Bosotto","date":"3 de julio de 2024","rating":"7.951","synopsis":"Alisa ‘Alya’ Kujou, una estudiante mitad rusa y mitad japonesa, empieza a mostrar interés por su compañero Masachika Kuze, quien secretamente entiende ruso."}'>
+          <div class="new-tag">20 Millones Vistas</div>
+          <img src="https://pbs.twimg.com/media/FrbtnvwWAAMBLto.jpg:large" alt="Tokidoki Bosotto">
+          <div class="carousel-item-content">
+            <div class="title">Tokidoki Bosotto</div>
+          </div>
+        </div>
+        <!-- Anime con temporadas -->
+        <div class="carousel-item" data-info='{"title":"Kami no Tou","date":"7 de julio de 2024","rating":"7.341","synopsis":"Ja Wangnan lucha por pasar el piso 20 de la Torre. En su viaje, conoce a Viole, un personaje misterioso y poderoso, y lo invita a unirse a su equipo.","hasSeasons":true}'>
+          <div class="new-tag">Mejor de la semana</div>
+          <img src="https://cdn.myanimelist.net/images/anime/1949/142074.jpg" alt="Kami no Tou">
+          <div class="carousel-item-content">
+            <div class="title">Kami no Tou</div>
+          </div>
+        </div>
+        <div class="carousel-item" data-info='{"title":"One Piece: Arco de Egghead","date":"Agosto de 2024","rating":"No disponible aún","synopsis":"Luffy y su tripulación continúan sus aventuras en el misterioso Arco de Egghead."}'>
+          <div class="new-tag">Nuevos Capitulos</div>
+          <img src="https://resizing.flixster.com/WZEVZ7ud0y0fN5kWxtNwUoWVyXA=/fit-in/352x330/v2/https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p26331776_b_v7_ac.jpg" alt="One Piece: Arco de Egghead">
+          <div class="carousel-item-content">
+            <div class="title">One Piece: Arco de Egghead</div>
+          </div>
+        </div>
+        <div class="carousel-item" data-info='{"title":"Detective Conan: Caso Cerrado","date":"Agosto de 2024","rating":"No disponible aún","synopsis":"Nuevos casos y misterios para Conan Edogawa y sus amigos."}'>
+          <div class="new-tag">1000 Millones Vistas</div>
+          <img src="https://m.media-amazon.com/images/M/MV5BOTBhOTlkNDctMDg1Zi00MGViLWJhMTUtMTU1OWEyYTUzZjdhXkEyXkFqcGdeQXVyNzAwMjU2MTY@._V1_FMjpg_UX1000_.jpg" alt="Detective Conan: Caso Cerrado">
+          <div class="carousel-item-content">
+            <div class="title">Detective Conan: Caso Cerrado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="anime-modal">
+      <div class="modal-content">
+        <span class="modal-close" id="modal-close">&times;</span>
+        <h2 id="modal-title"></h2>
+        <p id="modal-date"></p>
+        <p id="modal-rating"></p>
+        <p id="modal-synopsis"></p>
+        <div class="season-select" id="season-select" style="display: none;">
+          <button onclick="showEpisodes('season1')">Season 1</button>
+          <button onclick="showEpisodes('season2')">Season 2</button>
+          <div id="season-episodes" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const modal = document.getElementById('anime-modal');
+      const modalTitle = document.querySelector('#anime-modal #modal-title');
+      const modalDate = document.getElementById('modal-date');
+      const modalRating = document.getElementById('modal-rating');
+      const modalSynopsis = document.getElementById('modal-synopsis');
+      const modalClose = document.getElementById('modal-close');
+      const seasonSelect = document.getElementById('season-select');
+      const seasonEpisodes = document.getElementById('season-episodes');
+      document.querySelectorAll('.carousel-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const info = JSON.parse(item.getAttribute('data-info'));
+          modalTitle.innerText = info.title;
+          modalDate.innerText = `Fecha de estreno: ${info.date}`;
+          modalRating.innerText = `Calificación: ${info.rating}`;
+          modalSynopsis.innerText = info.synopsis;
+          if (info.hasSeasons) {
+            seasonSelect.style.display = 'block';
+            seasonEpisodes.innerHTML = ''; // Limpiar episodios previos
+          } else {
+            seasonSelect.style.display = 'none';
+          }
+          modal.style.display = 'flex';
+        });
+      });
+      modalClose.addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+      window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+
+      function showEpisodes(season) {
+        if (season === 'season1') {
+          seasonEpisodes.innerHTML = '<p>La primera temporada no está disponible en este momento.</p>';
+        } else if (season === 'season2') {
+          seasonEpisodes.innerHTML = `
+                    <ul class="episode-list">
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-1" target="_blank">Episodio 1</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-2" target="_blank">Episodio 2</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-3" target="_blank">Episodio 3</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-4" target="_blank">Episodio 4</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-5" target="_blank">Episodio 5</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-6" target="_blank">Episodio 6</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-7" target="_blank">Episodio 7</a></li>
+                        <li><a href="https://m.animeflv.net/ver/kami-no-tou-ouji-no-kikan-8" target="_blank">Episodio 8</a></li>
+                        <li><a href="https://www.yourupload.com/watch/Ea6Q08k5ik1G">Episodio 9</a></li>
+                         <li><a href="https://www.yourupload.com/watch/rBE1D67s8ApI">Episodio 10</a></li>
+                          <li><a href="https://www.yourupload.com/watch/36Hiex7273RG">Episodio 11</a></li>
+                    </ul>
+                    <p>Próximo episodio disponible: 1 de octubre de 2024</p>
+                `;
+        }
+      }
+    </script>
+  </body>
+
+  </html>
