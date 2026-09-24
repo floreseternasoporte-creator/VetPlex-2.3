@@ -1098,10 +1098,12 @@
         added: true,
         ts: Date.now()
       }).then(() => {
-        const el = document.getElementById("vote-message");
-        el.textContent = anime + " añadido a tu lista.";
-        el.style.display = "block";
-        setTimeout(() => { el.style.display = "none"; }, 2000);
+        var msg = anime + " añadido a tu lista.";
+        if (typeof window.vpToast === 'function') { window.vpToast(msg); }
+        else {
+          const el = document.getElementById("vote-message");
+          if (el) { el.textContent = msg; el.style.display = "block"; setTimeout(() => { el.style.display = "none"; }, 2000); }
+        }
       });
     }
 
@@ -2086,7 +2088,9 @@
   .vp-card-x:hover { background: rgba(0, 0, 0, 0.9) !important; }
 
   /* ---------- Detalle estilo Disney+ ---------- */
+  body.vp-no-header > header { display: none !important; }
   #vp-view-detalle { padding-bottom: 20px; position: relative; }
+  #vp-view-detalle > .vp-back { top: calc(14px + env(safe-area-inset-top)); left: 14px; z-index: 5; }
   .vp-det-backdrop {
     height: 292px; background-size: cover; background-position: center 20%;
     background-color: #0a0e1c; position: relative;
@@ -2095,7 +2099,7 @@
     content: ""; position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(6,9,19,0.15) 0%, rgba(6,9,19,0.55) 55%, #060913 96%);
   }
-  .vp-det-body { padding: 48px 16px 10px; margin-top: -84px; position: relative; }
+  .vp-det-body { padding: 16px 16px 10px; margin-top: -84px; position: relative; }
   .vp-back {
     position: absolute; top: 14px; left: 14px; z-index: 3;
     width: 38px !important; height: 38px; padding: 0 !important; margin: 0 !important;
@@ -2418,6 +2422,7 @@
   var vpCurrentTab = 'inicio';
   var vpBackStack = [];
   function vpGo(tab) {
+    document.body.classList.remove('vp-no-header');
     vpCurrentTab = TABS.indexOf(tab) !== -1 ? tab : 'inicio';
     $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
     var el = $('#vp-view-' + vpCurrentTab);
@@ -2434,6 +2439,7 @@
 
   function vpOpenDetail(anime) {
     if (!anime) return;
+    document.body.classList.add('vp-no-header');
     vpBackStack.push(vpCurrentTab === 'detalle' ? 'inicio' : vpCurrentTab);
     renderDetail(anime);
     $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
@@ -2472,9 +2478,9 @@
     var img = a.imageUrl || a.image || '';
     var meta = [a.year, a.category, a.subcategory].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ');
     var html = '';
-    html += '<div class="vp-det-backdrop"' + (img ? ' style="background-image:url(\'' + String(img).replace(/'/g, '') + '\')"' : '') + '></div>';
-    html += '<div class="vp-det-body">';
+    html += '<div class="vp-det-backdrop"' + (img ? ' style="background-image:url(&quot;' + esc(img) + '&quot;)"' : '') + '></div>';
     html += '<button type="button" class="vp-back" onclick="vpGoBack()" aria-label="Volver">‹</button>';
+    html += '<div class="vp-det-body">';
     html += '<div class="vp-det-top">';
     if (img) html += '<img class="vp-det-poster" src="' + esc(img) + '" alt="' + esc(a.title || '') + '" loading="lazy" onerror="this.style.display=\'none\'">';
     html += '<div class="vp-det-info"><h2>' + esc(a.title || 'Sin título') + '</h2>';
