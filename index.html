@@ -796,12 +796,21 @@
       }
       catalogLoaded = true;
     }
-    /* Catalogo local: arranca vacio. Esquema de datos (futuro catalogo en AWS):
-       { title, year, category/type, synopsis, imageUrl, videoUrl, trailerUrl,
-         episodes: [{ n, title, videoUrl }], _key }.
-       window.__vpAnimes expone el catalogo (ahora vacio). */
+    /* Catálogo: arranca de la caché local y luego de S3 (catalog.json).
+       Esquema de datos (panel Admin -> AWS):
+       { id, title, year, category, synopsis, image, type:'movie'|'serie',
+         status:'complete'|'airing', releaseDate, videoUrl,
+         seasons:[{season, episodes:[{n,title,videoUrl}]}],
+         episodes:[{n,title,videoUrl}], _key, addedAt }.
+       window.__vpAnimes expone el catalogo. */
+    /* Capa de catálogo VetPlex (panel Admin): la fuente de verdad es
+       catalog.json público en S3. window.vpBootCatalog pinta la caché
+       local al instante y luego intenta S3 con cache-bust. El evento
+       'vp-catalog-updated' re-pinta tras publicar/editar/borrar. */
+    document.addEventListener('vp-catalog-updated', () => { renderAnimeList(window.__vpAnimes || []); });
     function displayAnimes() {
-      renderAnimeList([]);
+      if (typeof window.vpBootCatalog === 'function') window.vpBootCatalog(renderAnimeList);
+      else renderAnimeList([]);
     }
     // Busqueda de anime (filtra las tarjetas del catalogo y los rieles)
     function searchAnime() {
@@ -1730,6 +1739,7 @@
   </div>
   <div id="vp-search-hint" class="vp-search-hint">Explora todo el catálogo</div>
   <div id="vp-search-results" class="vp-grid"></div>
+  <div class="vp-adm-foot"><button type="button" id="vp-admin-link">Admin</button></div>
 </section>
 
 <!-- Vista: Mi Lista -->
@@ -1757,6 +1767,158 @@
 
 <!-- Vista: Detalle del anime (estilo Disney+) -->
 <section id="vp-view-detalle" class="vp-view" aria-label="Detalle"></section>
+
+<!-- Vista: Admin (panel de publicación) -->
+<section id="vp-view-admin" class="vp-view" aria-label="Administración">
+  <div class="vp-view-head vp-adm-head">
+    <button type="button" class="vp-back" id="vp-admin-back" aria-label="Volver">‹</button>
+    <div>
+      <h2>Admin</h2>
+      <p class="vp-view-sub">Publica animes y películas en VetPlex</p>
+    </div>
+    <button type="button" id="vp-adm-logout" class="vp-adm-mini" hidden>Cerrar sesión</button>
+  </div>
+
+  <!-- Puerta: correo + PIN -->
+  <div id="vp-adm-gate" class="vp-adm-box">
+    <h3 class="vp-sec" style="margin-left:0;margin-top:0">Acceso restringido</h3>
+    <p class="vp-note" id="vp-adm-gate-msg">Solo el administrador puede entrar aquí.</p>
+    <label class="vp-adm-lbl">Correo
+      <input id="vp-adm-email" type="email" class="vp-adm-in" placeholder="tu correo" autocomplete="email">
+    </label>
+    <label class="vp-adm-lbl">PIN
+      <input id="vp-adm-pin" type="password" class="vp-adm-in" inputmode="numeric" maxlength="6" placeholder="4 a 6 dígitos" autocomplete="off">
+    </label>
+    <label class="vp-adm-lbl" id="vp-adm-pin2-wrap" hidden>Confirma el PIN
+      <input id="vp-adm-pin2" type="password" class="vp-adm-in" inputmode="numeric" maxlength="6" placeholder="repite el PIN" autocomplete="off">
+    </label>
+    <button type="button" class="vp-btn vp-btn-primary" id="vp-adm-enter">Entrar</button>
+    <p class="vp-note" id="vp-adm-gate-err" style="color:#ff8a8a" hidden></p>
+  </div>
+
+  <!-- Panel -->
+  <div id="vp-adm-panel" hidden>
+    <div class="vp-adm-tabs">
+      <button type="button" class="on" data-atab="nuevo">＋ Nuevo</button>
+      <button type="button" data-atab="gestionar">Gestionar</button>
+      <button type="button" data-atab="aws">AWS</button>
+    </div>
+
+    <!-- Nuevo / editar -->
+    <div id="vp-adm-tab-nuevo" class="vp-adm-tab on">
+      <form id="vp-adm-form" autocomplete="off">
+        <input type="hidden" id="vp-adm-editid" value="">
+        <label class="vp-adm-lbl">Título *
+          <input id="vp-adm-title" class="vp-adm-in" required maxlength="120" placeholder="Nombre del anime o película">
+        </label>
+        <label class="vp-adm-lbl">Sinopsis
+          <textarea id="vp-adm-syn" class="vp-adm-in" rows="3" maxlength="2000" placeholder="¿De qué trata?"></textarea>
+        </label>
+        <div class="vp-adm-row">
+          <label class="vp-adm-lbl">Categoría / género
+            <input id="vp-adm-cat" class="vp-adm-in" placeholder="Acción, Romance…" maxlength="60">
+          </label>
+          <label class="vp-adm-lbl" style="max-width:110px">Año
+            <input id="vp-adm-year" class="vp-adm-in" type="number" min="1950" max="2100" placeholder="2026">
+          </label>
+        </div>
+        <label class="vp-adm-lbl">Fecha de estreno <span class="vp-adm-opt">(opcional · alimenta el Calendario)</span>
+          <input id="vp-adm-date" class="vp-adm-in" type="date">
+        </label>
+        <label class="vp-adm-lbl">Portada (imagen) *
+          <input id="vp-adm-poster" type="file" accept="image/*" class="vp-adm-in">
+        </label>
+        <div id="vp-adm-poster-prev"></div>
+        <div class="vp-adm-row">
+          <label class="vp-adm-lbl">Tipo
+            <select id="vp-adm-type" class="vp-adm-in">
+              <option value="serie">Serie / Anime</option>
+              <option value="movie">Película</option>
+            </select>
+          </label>
+          <label class="vp-adm-lbl">Estado
+            <select id="vp-adm-status" class="vp-adm-in">
+              <option value="complete">Completa</option>
+              <option value="airing">En emisión</option>
+            </select>
+          </label>
+        </div>
+        <div id="vp-adm-movie-box" hidden>
+          <label class="vp-adm-lbl">Video de la película *
+            <input id="vp-adm-moviefile" type="file" accept="video/*" class="vp-adm-in">
+          </label>
+        </div>
+        <div id="vp-adm-series-box">
+          <label class="vp-adm-lbl" style="max-width:150px">Temporadas
+            <input id="vp-adm-seasons" class="vp-adm-in" type="number" min="1" max="30" value="1">
+          </label>
+          <div id="vp-adm-seasons-box"></div>
+        </div>
+        <div id="vp-adm-progress" class="vp-adm-progress" hidden></div>
+        <div class="vp-adm-row">
+          <button type="submit" class="vp-btn vp-btn-primary" id="vp-adm-publish">Publicar</button>
+          <button type="button" class="vp-btn vp-btn-ghost" id="vp-adm-cancel-edit" hidden>Cancelar edición</button>
+        </div>
+        <p class="vp-note">Al publicar, los archivos se suben a tu bucket de AWS S3 y el catálogo se actualiza en toda la plataforma.</p>
+      </form>
+    </div>
+
+    <!-- Gestionar -->
+    <div id="vp-adm-tab-gestionar" class="vp-adm-tab">
+      <div id="vp-adm-list"></div>
+    </div>
+
+    <!-- AWS -->
+    <div id="vp-adm-tab-aws" class="vp-adm-tab">
+      <div class="vp-adm-box">
+        <h3 class="vp-sec" style="margin-left:0;margin-top:0">Conexión con AWS</h3>
+        <label class="vp-adm-lbl">Access Key ID
+          <input id="vp-adm-key" class="vp-adm-in" autocomplete="off" placeholder="AKIA…" spellcheck="false">
+        </label>
+        <label class="vp-adm-lbl">Secret Access Key
+          <input id="vp-adm-secret" type="password" class="vp-adm-in" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="vp-adm-row">
+          <label class="vp-adm-lbl">Bucket
+            <input id="vp-adm-bucket" class="vp-adm-in" value="vetplex-media-682849160982" spellcheck="false">
+          </label>
+          <label class="vp-adm-lbl" style="max-width:130px">Región
+            <input id="vp-adm-region" class="vp-adm-in" value="us-east-2" spellcheck="false">
+          </label>
+        </div>
+        <div class="vp-adm-row">
+          <button type="button" class="vp-btn vp-btn-primary" id="vp-adm-test">Probar conexión</button>
+          <button type="button" class="vp-btn vp-btn-ghost" id="vp-adm-save-aws">Guardar</button>
+        </div>
+        <p class="vp-note" id="vp-adm-aws-msg"></p>
+        <details class="vp-adm-help">
+          <summary>Qué configurar en la consola de AWS</summary>
+          <p class="vp-note">1) <b>Lectura pública</b> (política del bucket), para que los videos se vean sin login:</p>
+          <pre class="vp-adm-pre">{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "PublicRead",
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::vetplex-media-682849160982/*"
+  }]
+}</pre>
+          <p class="vp-note">2) <b>CORS</b> del bucket (Permisos → CORS), para subir desde la web:</p>
+          <pre class="vp-adm-pre">[{
+  "AllowedHeaders": ["*"],
+  "AllowedMethods": ["GET","PUT","POST","DELETE","HEAD"],
+  "AllowedOrigins": ["https://floreseternasoporte-creator.github.io"],
+  "ExposeHeaders": ["ETag"],
+  "MaxAgeSeconds": 3000
+}]</pre>
+          <p class="vp-note">3) El usuario <b>vetplex-uploader</b> solo necesita: <span class="vp-adm-code">s3:PutObject</span>, <span class="vp-adm-code">s3:GetObject</span>, <span class="vp-adm-code">s3:DeleteObject</span>, <span class="vp-adm-code">s3:ListBucket</span> y <span class="vp-adm-code">s3:AbortMultipartUpload</span> sobre este bucket.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
 
 <!-- Reproductor de video VetPlex -->
 <div id="vp-player" hidden>
@@ -2872,6 +3034,812 @@
 })();
 </script>
 
+
+<style id="vp-admin-css">
+/* VetPlex Admin — estilos del panel (2026-09-24) */
+.vp-adm-foot { text-align: center; padding: 26px 0 44px; }
+#vp-admin-link {
+  background: none; border: none; padding: 10px 18px; cursor: pointer;
+  color: rgba(255,255,255,0.28); font-size: 12px; letter-spacing: 1px;
+}
+#vp-admin-link:active { color: rgba(255,255,255,0.6); }
+.vp-adm-head { display: flex; align-items: center; gap: 12px; }
+.vp-adm-head > div { flex: 1 1 auto; }
+.vp-adm-mini {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+  color: #cfd6ea; border-radius: 8px; font-size: 12px; padding: 7px 10px; cursor: pointer;
+  flex: 0 0 auto;
+}
+.vp-adm-box {
+  margin: 14px 16px; padding: 16px; border-radius: 14px;
+  background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09);
+}
+.vp-adm-lbl { display: block; margin: 0 0 12px; font-size: 13px; font-weight: 700; color: #dfe4f5; }
+.vp-adm-opt { font-weight: 400; color: #9aa3b8; font-size: 12px; }
+.vp-adm-in {
+  display: block; width: 100%; margin-top: 6px; padding: 11px 12px;
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.32); color: #fff; font-size: 14px;
+  font-family: inherit;
+}
+.vp-adm-in:focus { outline: none; border-color: #00a8e1; }
+select.vp-adm-in option { color: #111; }
+textarea.vp-adm-in { resize: vertical; }
+.vp-adm-row { display: flex; gap: 10px; }
+.vp-adm-row > .vp-adm-lbl { flex: 1 1 0; min-width: 0; }
+.vp-adm-row > .vp-btn { flex: 1 1 0; }
+#vp-adm-gate .vp-btn, #vp-adm-form .vp-btn { flex: 1 1 0; }
+#vp-adm-poster-prev img { max-height: 170px; border-radius: 10px; margin: 4px 0 12px; display: block; }
+.vp-adm-tabs { display: flex; gap: 8px; margin: 12px 16px 4px; }
+.vp-adm-tabs button {
+  flex: 1 1 0; padding: 11px 6px; border-radius: 10px; cursor: pointer;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
+  color: #cfd6ea; font-size: 13.5px; font-weight: 700;
+}
+.vp-adm-tabs button.on { background: linear-gradient(135deg, #00a8e1, #0063e5); color: #fff; border-color: transparent; }
+.vp-adm-tab { display: none; padding: 6px 16px 30px; }
+.vp-adm-tab.on { display: block; }
+.vp-adm-season {
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 12px;
+  padding: 12px; margin: 12px 0;
+}
+.vp-adm-season legend { font-size: 13px; font-weight: 800; color: #00c2ff; padding: 0 8px; }
+.vp-adm-eprow {
+  display: flex; gap: 8px; align-items: center; margin-top: 8px;
+}
+.vp-adm-epn { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: #9aa3b8; width: 30px; }
+.vp-adm-eprow .vp-adm-eptitle { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+.vp-adm-eprow .vp-adm-epfile { flex: 1 1 auto; min-width: 0; margin-top: 0; font-size: 12px; padding: 8px; }
+.vp-adm-cur { flex: 0 0 auto; font-size: 11px; color: #7dff9a; font-weight: 700; }
+.vp-adm-progress { margin: 12px 0; }
+.vp-adm-prow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.vp-adm-pname { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: #dfe4f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vp-adm-pbar { flex: 0 0 110px; height: 8px; border-radius: 6px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.vp-adm-pbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #00a8e1, #0063e5); border-radius: 6px; transition: width 0.2s; }
+.vp-adm-ppct { flex: 0 0 auto; font-size: 12px; color: #9aa3b8; width: 40px; text-align: right; }
+.vp-adm-item {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 10px; padding: 10px;
+  background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09); border-radius: 12px;
+}
+.vp-adm-thumb { width: 52px; height: 70px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; background: #141a30; }
+.vp-adm-imet { flex: 1 1 auto; min-width: 0; }
+.vp-adm-imet h4 { margin: 0 0 3px; font-size: 14px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vp-adm-imet p { margin: 0; font-size: 12px; color: #9aa3b8; }
+.vp-adm-item .vp-btn { flex: 0 0 auto; padding: 9px 12px !important; font-size: 13px !important; }
+.vp-adm-help { margin-top: 14px; }
+.vp-adm-help summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: #00c2ff; }
+.vp-adm-pre {
+  background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  padding: 10px; font-size: 11px; color: #c8d2ec; overflow-x: auto; white-space: pre;
+}
+.vp-adm-code { background: rgba(0,168,225,0.15); padding: 1px 6px; border-radius: 6px; font-size: 11.5px; color: #7fdcff; }
+</style>
+
+<script>
+/* ============================================================
+   VetPlex Admin — panel de publicación (2026-09-24)
+   Formulario completo para publicar animes/películas:
+   subida de videos e imágenes a AWS S3 + catalog.json como
+   fuente de verdad del catálogo.
+   Acceso: correo del administrador + PIN (4-6 dígitos).
+   Credenciales AWS en localStorage (vp_aws_cfg).
+   Sin Firebase. Todo local + S3.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  var ADMIN_EMAIL = 'darelvega6@yahoo.com';
+  var PIN_KEY = 'vp_admin_pin';
+  var SES_KEY = 'vp_admin_ok';
+  var CFG_KEY = 'vp_aws_cfg';
+  var CAT_KEY = 'vp_catalog_v1';
+  var SEQ_KEY = 'vp_id_seq';
+  var CAT_EVENT = 'vp-catalog-updated';
+  var DEF_BUCKET = 'vetplex-media-682849160982';
+  var DEF_REGION = 'us-east-2';
+  var MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function toast(m) { if (typeof window.vpToast === 'function') window.vpToast(m); }
+
+  /* ============ capa de catálogo (fuente de verdad: S3 catalog.json) ============ */
+  function vpAwsCfg() {
+    var c = lsGet(CFG_KEY, null) || {};
+    return {
+      keyId: c.keyId || '', secret: c.secret || '',
+      bucket: c.bucket || DEF_BUCKET, region: c.region || DEF_REGION
+    };
+  }
+  function vpS3Base() {
+    var c = vpAwsCfg();
+    return 'https://' + c.bucket + '.s3.' + c.region + '.amazonaws.com';
+  }
+  function vpReadCachedCatalog() {
+    var j = lsGet(CAT_KEY, null);
+    return Array.isArray(j) ? j : [];
+  }
+  /* Pinta la caché local al instante y luego intenta S3 (cache-bust).
+     Si S3 responde 200 con un array válido, manda y actualiza la caché. */
+  function vpBootCatalog(render) {
+    render(vpReadCachedCatalog());
+    var done = false;
+    var to = setTimeout(function () { done = true; }, 9000);
+    fetch(vpS3Base() + '/catalog.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (j) {
+        if (done) return;
+        clearTimeout(to);
+        if (Array.isArray(j)) { lsSet(CAT_KEY, j); render(j); }
+      })
+      .catch(function () { clearTimeout(to); });
+  }
+  function vpGetCatalog() { return Array.isArray(window.__vpAnimes) ? window.__vpAnimes : []; }
+  function vpCatalogSave(cat) {
+    window.__vpAnimes = cat;
+    lsSet(CAT_KEY, cat);
+    document.dispatchEvent(new CustomEvent(CAT_EVENT));
+  }
+  /* IDs estables y ordenables: vp-a0001, vp-a0002… */
+  function vpNextId() {
+    var n = parseInt(lsGet(SEQ_KEY, 0), 10) || 0;
+    n += 1; lsSet(SEQ_KEY, n);
+    return 'vp-a' + String(n).padStart(4, '0');
+  }
+  window.vpAwsCfg = vpAwsCfg;
+  window.vpS3Base = vpS3Base;
+  window.vpBootCatalog = vpBootCatalog;
+  window.vpGetCatalog = vpGetCatalog;
+  window.vpCatalogSave = vpCatalogSave;
+  window.vpNextId = vpNextId;
+
+  /* ============ rutas S3 ============ */
+  function vpExt(name) { var m = String(name || '').match(/\.([a-z0-9]{1,6})$/i); return m ? m[1].toLowerCase() : 'bin'; }
+  function vpPad2(n) { return String(n).padStart(2, '0'); }
+  function vpKeyPoster(id, fileName) { return 'media/images/' + id + '/poster.' + vpExt(fileName); }
+  function vpKeyMovie(id, fileName) { return 'media/videos/' + id + '/movie.' + vpExt(fileName); }
+  function vpKeyEpisode(id, season, ep, fileName) {
+    return 'media/videos/' + id + '/s' + vpPad2(season) + 'e' + vpPad2(ep) + '.' + vpExt(fileName);
+  }
+
+  /* ============ fechas: "2026-09-25" -> "25 de septiembre de 2026"
+     (el Calendario parsea el formato largo en hora local, sin
+     desfase de zona horaria) ============ */
+  function vpFechaLarga(iso) {
+    var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return '';
+    var mi = parseInt(m[2], 10);
+    if (mi < 1 || mi > 12) return '';
+    return parseInt(m[3], 10) + ' de ' + MESES_L[mi - 1] + ' de ' + m[1];
+  }
+
+  /* ============ objeto anime (esquema del catálogo) ============
+     {id, _key, title, synopsis, image, category, year, type,
+      status, releaseDate, addedAt, videoUrl? (película),
+      seasons?, episodes? (serie; episodes aplanado para el detalle
+      y el reproductor: [{n global, season, ep, title, videoUrl}])} */
+  function vpBuildAnime(o) {
+    var a = {
+      id: o.id, _key: o.id,
+      title: String(o.title || '').trim(),
+      synopsis: o.synopsis || '',
+      image: o.image || '',
+      category: o.category || '',
+      year: String(o.year || ''),
+      type: o.type === 'movie' ? 'movie' : 'serie',
+      status: o.status === 'airing' ? 'airing' : 'complete',
+      releaseDate: o.releaseDate || '',
+      addedAt: o.addedAt || Date.now()
+    };
+    if (a.type === 'movie') {
+      a.videoUrl = o.videoUrl || '';
+    } else {
+      var seasons = Array.isArray(o.seasons) ? o.seasons : [];
+      var flat = [], g = 0;
+      seasons.forEach(function (s) {
+        (Array.isArray(s.episodes) ? s.episodes : []).forEach(function (e, i) {
+          g += 1;
+          flat.push({ n: g, season: s.season, ep: (e && e.ep) || (i + 1), title: (e && e.title) || '', videoUrl: (e && e.videoUrl) || '' });
+        });
+      });
+      a.seasons = seasons.map(function (s) {
+        return {
+          season: s.season,
+          episodes: (Array.isArray(s.episodes) ? s.episodes : []).map(function (e, i) {
+            return { n: (e && e.ep) || (i + 1), title: (e && e.title) || '', videoUrl: (e && e.videoUrl) || '' };
+          })
+        };
+      });
+      a.episodes = flat;
+    }
+    return a;
+  }
+
+  /* ============ puerta: correo + PIN ============ */
+  function vpPinHash(pin) {
+    var salted = 'vetplex$' + String(pin);
+    if (window.crypto && crypto.subtle && window.TextEncoder) {
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(salted)).then(function (buf) {
+        return Array.prototype.map.call(new Uint8Array(buf), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+      });
+    }
+    var h = 7;
+    for (var i = 0; i < salted.length; i++) h = ((h * 31) + salted.charCodeAt(i)) >>> 0;
+    return Promise.resolve('f' + h.toString(16));
+  }
+  /* {ok, mode, error}. mode 'create' = aún no hay PIN (hay que crearlo). */
+  function vpGateCheck(email, pin, pin2) {
+    email = String(email || '').trim().toLowerCase();
+    if (email !== ADMIN_EMAIL) return Promise.resolve({ ok: false, error: 'Ese correo no tiene acceso de administrador.' });
+    pin = String(pin || '').trim();
+    if (!/^\d{4,6}$/.test(pin)) return Promise.resolve({ ok: false, error: 'El PIN debe tener de 4 a 6 dígitos.' });
+    var stored = null;
+    try { stored = localStorage.getItem(PIN_KEY); } catch (e) {}
+    if (!stored) {
+      if (String(pin2 || '').trim() !== pin) {
+        return Promise.resolve({ ok: false, mode: 'create', error: 'Los PIN no coinciden. Escríbelo dos veces igual.' });
+      }
+      return vpPinHash(pin).then(function (h) {
+        try { localStorage.setItem(PIN_KEY, h); } catch (e) {}
+        return { ok: true, mode: 'create' };
+      });
+    }
+    return vpPinHash(pin).then(function (h) {
+      if (h === stored) return { ok: true, mode: 'login' };
+      return { ok: false, mode: 'login', error: 'PIN incorrecto.' };
+    });
+  }
+  function vpHasSession() { try { return sessionStorage.getItem(SES_KEY) === '1'; } catch (e) { return false; } }
+  function vpSetSession() { try { sessionStorage.setItem(SES_KEY, '1'); } catch (e) {} }
+  function vpClearSession() { try { sessionStorage.removeItem(SES_KEY); } catch (e) {} }
+
+  /* ============ AWS SDK (carga perezosa, solo al usar el panel) ============ */
+  var _sdk = null;
+  function vpSdk() {
+    if (_sdk) return Promise.resolve(_sdk);
+    return Promise.all([
+      import('https://esm.sh/@aws-sdk/client-s3@3.600.0'),
+      import('https://esm.sh/@aws-sdk/lib-storage@3.600.0')
+    ]).then(function (rs) { _sdk = { s3: rs[0], up: rs[1] }; return _sdk; });
+  }
+  function vpClient(sdk) {
+    var cfg = vpAwsCfg();
+    if (!cfg.keyId || !cfg.secret) throw new Error('Configura primero tu Access Key ID y Secret en la pestaña AWS.');
+    return new sdk.s3.S3Client({ region: cfg.region, credentials: { accessKeyId: cfg.keyId, secretAccessKey: cfg.secret } });
+  }
+  /* Subida multipart (videos grandes) con progreso */
+  function vpUploadFile(sdk, client, key, file, onPct) {
+    var u = new sdk.up.Upload({
+      client: client,
+      params: { Bucket: vpAwsCfg().bucket, Key: key, Body: file, ContentType: file.type || 'application/octet-stream' }
+    });
+    if (onPct) u.on('httpUploadProgress', function (p) { if (p && p.total) onPct((p.loaded / p.total) * 100); });
+    return u.done().then(function () { return vpS3Base() + '/' + key; });
+  }
+  function vpPutCatalogJson(sdk, client, cat) {
+    return client.send(new sdk.s3.PutObjectCommand({
+      Bucket: vpAwsCfg().bucket, Key: 'catalog.json',
+      Body: JSON.stringify(cat), ContentType: 'application/json'
+    }));
+  }
+
+  /* ============ UI: progreso ============ */
+  function vpProgRow(label) {
+    var box = $('#vp-adm-progress');
+    if (!box) return function () {};
+    box.hidden = false;
+    var row = document.createElement('div');
+    row.className = 'vp-adm-prow';
+    var nm = document.createElement('span'); nm.className = 'vp-adm-pname'; nm.textContent = label;
+    var bar = document.createElement('div'); bar.className = 'vp-adm-pbar';
+    var fill = document.createElement('i'); bar.appendChild(fill);
+    var pct = document.createElement('span'); pct.className = 'vp-adm-ppct'; pct.textContent = '0%';
+    row.appendChild(nm); row.appendChild(bar); row.appendChild(pct);
+    box.appendChild(row);
+    return function (p) {
+      p = Math.max(0, Math.min(100, p || 0));
+      fill.style.width = p + '%';
+      pct.textContent = Math.round(p) + '%';
+    };
+  }
+
+  /* ============ UI: navegación del panel ============ */
+  var vpAdmPrevTab = 'inicio';
+  var vpEditPrev = null; /* anime en edición */
+
+  function vpAdmTab(name) {
+    $$('#vp-view-admin [data-atab]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-atab') === name);
+    });
+    $$('#vp-view-admin .vp-adm-tab').forEach(function (t) {
+      t.classList.toggle('on', t.id === 'vp-adm-tab-' + name);
+    });
+    if (name === 'gestionar') vpRenderAdmList();
+  }
+  function vpShowGate() {
+    var gate = $('#vp-adm-gate'), panel = $('#vp-adm-panel');
+    if (gate) gate.hidden = false;
+    if (panel) panel.hidden = true;
+    var hasPin = null;
+    try { hasPin = localStorage.getItem(PIN_KEY); } catch (e) {}
+    var w2 = $('#vp-adm-pin2-wrap');
+    if (w2) w2.hidden = !!hasPin;
+    var btn = $('#vp-adm-enter');
+    if (btn) btn.textContent = hasPin ? 'Entrar' : 'Crear PIN y entrar';
+    var msg = $('#vp-adm-gate-msg');
+    if (msg) msg.textContent = hasPin
+      ? 'Escribe tu correo y tu PIN para entrar.'
+      : 'Primera vez: escribe tu correo y crea un PIN de 4 a 6 dígitos.';
+  }
+  function vpShowPanel() {
+    var gate = $('#vp-adm-gate'), panel = $('#vp-adm-panel');
+    if (gate) gate.hidden = true;
+    if (panel) panel.hidden = false;
+    var cfg = vpAwsCfg();
+    if ($('#vp-adm-key')) $('#vp-adm-key').value = cfg.keyId;
+    if ($('#vp-adm-secret')) $('#vp-adm-secret').value = cfg.secret;
+    if ($('#vp-adm-bucket')) $('#vp-adm-bucket').value = cfg.bucket;
+    if ($('#vp-adm-region')) $('#vp-adm-region').value = cfg.region;
+    vpTypeToggle();
+    vpBuildSeasonFields();
+    vpAdmTab('nuevo');
+  }
+  function vpOpenAdmin() {
+    var on = document.querySelector('#vp-tabbar button.on');
+    vpAdmPrevTab = (on && on.getAttribute('data-tab')) || 'inicio';
+    $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
+    var adm = $('#vp-view-admin');
+    if (adm) adm.classList.add('on');
+    window.scrollTo(0, 0);
+    if (vpHasSession()) vpShowPanel(); else vpShowGate();
+  }
+  function vpCloseAdmin() { if (typeof window.vpGo === 'function') window.vpGo(vpAdmPrevTab); }
+  window.vpOpenAdmin = vpOpenAdmin;
+
+  /* ============ UI: puerta ============ */
+  function vpGateSubmit() {
+    var err = $('#vp-adm-gate-err');
+    if (err) err.hidden = true;
+    var email = $('#vp-adm-email') ? $('#vp-adm-email').value : '';
+    var pin = $('#vp-adm-pin') ? $('#vp-adm-pin').value : '';
+    var pin2 = $('#vp-adm-pin2') ? $('#vp-adm-pin2').value : '';
+    vpGateCheck(email, pin, pin2).then(function (r) {
+      if (r.ok) {
+        vpSetSession();
+        vpShowPanel();
+        toast(r.mode === 'create' ? 'PIN creado. Bienvenido.' : 'Bienvenido.');
+      } else {
+        if (err) { err.textContent = r.error || 'No se pudo entrar.'; err.hidden = false; }
+      }
+    });
+  }
+
+  /* ============ UI: AWS ============ */
+  function vpSaveAws() {
+    lsSet(CFG_KEY, {
+      keyId: $('#vp-adm-key') ? $('#vp-adm-key').value.trim() : '',
+      secret: $('#vp-adm-secret') ? $('#vp-adm-secret').value.trim() : '',
+      bucket: $('#vp-adm-bucket') ? $('#vp-adm-bucket').value.trim() : DEF_BUCKET,
+      region: $('#vp-adm-region') ? $('#vp-adm-region').value.trim() : DEF_REGION
+    });
+    var msg = $('#vp-adm-aws-msg');
+    if (msg) { msg.style.color = '#7dff9a'; msg.textContent = '✓ Configuración de AWS guardada.'; }
+    toast('AWS guardado');
+  }
+  function vpTestAws() {
+    var msg = $('#vp-adm-aws-msg');
+    if (msg) { msg.style.color = '#9aa3b8'; msg.textContent = 'Probando conexión…'; }
+    vpSaveAwsSilent();
+    vpSdk().then(function (sdk) {
+      var client = vpClient(sdk);
+      var cfg = vpAwsCfg();
+      return client.send(new sdk.s3.ListObjectsV2Command({ Bucket: cfg.bucket, MaxKeys: 1 }));
+    }).then(function () {
+      if (msg) { msg.style.color = '#7dff9a'; msg.textContent = '✓ Conexión OK: el bucket responde.'; }
+    }).catch(function (e) {
+      if (msg) { msg.style.color = '#ff8a8a'; msg.textContent = '✗ ' + (e && e.message ? e.message : 'Error de conexión'); }
+    });
+  }
+  function vpSaveAwsSilent() {
+    lsSet(CFG_KEY, {
+      keyId: $('#vp-adm-key') ? $('#vp-adm-key').value.trim() : '',
+      secret: $('#vp-adm-secret') ? $('#vp-adm-secret').value.trim() : '',
+      bucket: $('#vp-adm-bucket') ? $('#vp-adm-bucket').value.trim() : DEF_BUCKET,
+      region: $('#vp-adm-region') ? $('#vp-adm-region').value.trim() : DEF_REGION
+    });
+  }
+
+  /* ============ UI: formulario ============ */
+  function vpTypeToggle() {
+    var t = $('#vp-adm-type') ? $('#vp-adm-type').value : 'serie';
+    var mb = $('#vp-adm-movie-box'), sb = $('#vp-adm-series-box');
+    if (mb) mb.hidden = (t !== 'movie');
+    if (sb) sb.hidden = (t === 'movie');
+  }
+  function vpBuildSeasonFields() {
+    var box = $('#vp-adm-seasons-box');
+    if (!box) return;
+    box.innerHTML = '';
+    var ns = Math.max(1, Math.min(30, parseInt($('#vp-adm-seasons').value, 10) || 1));
+    var prevSeasons = (vpEditPrev && vpEditPrev.seasons) || [];
+    for (var s = 1; s <= ns; s++) {
+      var prev = null;
+      for (var k = 0; k < prevSeasons.length; k++) if (prevSeasons[k].season === s) { prev = prevSeasons[k]; break; }
+      var nep = prev ? prev.episodes.length : 1;
+      var fs = document.createElement('fieldset');
+      fs.className = 'vp-adm-season';
+      fs.setAttribute('data-season', s);
+      var lg = document.createElement('legend'); lg.textContent = 'Temporada ' + s; fs.appendChild(lg);
+      var lab = document.createElement('label'); lab.className = 'vp-adm-lbl'; lab.style.maxWidth = '150px';
+      lab.textContent = 'Episodios';
+      var cnt = document.createElement('input');
+      cnt.type = 'number'; cnt.min = '1'; cnt.max = '200'; cnt.value = String(nep);
+      cnt.className = 'vp-adm-in vp-adm-epcount';
+      lab.appendChild(cnt); fs.appendChild(lab);
+      var eps = document.createElement('div'); eps.className = 'vp-adm-eps'; fs.appendChild(eps);
+      box.appendChild(fs);
+      (function (fset, pseason) {
+        var c = fset.querySelector('.vp-adm-epcount');
+        var paint = function () {
+          vpPaintEpisodes(fset, pseason, Math.max(1, Math.min(200, parseInt(c.value, 10) || 1)));
+        };
+        c.addEventListener('change', paint);
+        paint();
+      })(fs, prev);
+    }
+  }
+  function vpPaintEpisodes(fset, pseason, n) {
+    var box = fset.querySelector('.vp-adm-eps');
+    if (!box) return;
+    box.innerHTML = '';
+    var prevEps = (pseason && pseason.episodes) || [];
+    for (var e = 1; e <= n; e++) {
+      var pe = prevEps[e - 1] || {};
+      var row = document.createElement('div');
+      row.className = 'vp-adm-eprow';
+      row.setAttribute('data-ep', e);
+      var num = document.createElement('span'); num.className = 'vp-adm-epn'; num.textContent = 'E' + e;
+      var ti = document.createElement('input');
+      ti.type = 'text'; ti.maxLength = 120; ti.placeholder = 'Título del episodio';
+      ti.className = 'vp-adm-in vp-adm-eptitle'; ti.value = pe.title || '';
+      var fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = 'video/*'; fi.className = 'vp-adm-in vp-adm-epfile';
+      row.appendChild(num); row.appendChild(ti); row.appendChild(fi);
+      if (pe.videoUrl) {
+        var cur = document.createElement('span'); cur.className = 'vp-adm-cur'; cur.textContent = '✓ video actual';
+        row.appendChild(cur);
+      }
+      box.appendChild(row);
+    }
+  }
+  function vpCollectForm() {
+    var type = $('#vp-adm-type') ? $('#vp-adm-type').value : 'serie';
+    var d = {
+      title: $('#vp-adm-title') ? $('#vp-adm-title').value.trim() : '',
+      synopsis: $('#vp-adm-syn') ? $('#vp-adm-syn').value.trim() : '',
+      category: $('#vp-adm-cat') ? $('#vp-adm-cat').value.trim() : '',
+      year: $('#vp-adm-year') ? $('#vp-adm-year').value.trim() : '',
+      releaseDate: vpFechaLarga($('#vp-adm-date') ? $('#vp-adm-date').value : ''),
+      type: type,
+      status: $('#vp-adm-status') ? $('#vp-adm-status').value : 'complete',
+      posterFile: ($('#vp-adm-poster') && $('#vp-adm-poster').files[0]) || null,
+      movieFile: null,
+      seasons: []
+    };
+    if (type === 'movie') {
+      d.movieFile = ($('#vp-adm-moviefile') && $('#vp-adm-moviefile').files[0]) || null;
+    } else {
+      $$('#vp-adm-seasons-box .vp-adm-season').forEach(function (fs) {
+        var s = parseInt(fs.getAttribute('data-season'), 10);
+        var seps = [];
+        $$('.vp-adm-eprow', fs).forEach(function (row) {
+          seps.push({
+            ep: parseInt(row.getAttribute('data-ep'), 10),
+            title: row.querySelector('.vp-adm-eptitle').value.trim(),
+            file: row.querySelector('.vp-adm-epfile').files[0] || null
+          });
+        });
+        d.seasons.push({ season: s, episodes: seps });
+      });
+    }
+    return d;
+  }
+  function vpResetForm() {
+    var f = $('#vp-adm-form');
+    if (f) f.reset();
+    vpEditPrev = null;
+    if ($('#vp-adm-editid')) $('#vp-adm-editid').value = '';
+    if ($('#vp-adm-poster-prev')) $('#vp-adm-poster-prev').innerHTML = '';
+    var prog = $('#vp-adm-progress');
+    if (prog) { prog.innerHTML = ''; prog.hidden = true; }
+    if ($('#vp-adm-type')) $('#vp-adm-type').value = 'serie';
+    if ($('#vp-adm-seasons')) $('#vp-adm-seasons').value = '1';
+    vpTypeToggle();
+    vpBuildSeasonFields();
+    var ce = $('#vp-adm-cancel-edit');
+    if (ce) ce.hidden = true;
+    var pb = $('#vp-adm-publish');
+    if (pb) { pb.disabled = false; pb.textContent = 'Publicar'; }
+  }
+
+  /* ============ publicar ============ */
+  function vpPublish(ev) {
+    if (ev) ev.preventDefault();
+    var d = vpCollectForm();
+    if (!d.title) { toast('Ponle un título.'); return; }
+    var editId = $('#vp-adm-editid') ? $('#vp-adm-editid').value : '';
+    var prev = null;
+    if (editId) {
+      var cat0 = vpGetCatalog();
+      for (var i = 0; i < cat0.length; i++) if (cat0[i].id === editId) { prev = cat0[i]; break; }
+    }
+    if (!d.posterFile && !(prev && prev.image)) { toast('Sube una portada.'); return; }
+    if (d.type === 'movie' && !d.movieFile && !(prev && prev.videoUrl)) { toast('Sube el video de la película.'); return; }
+    if (d.type !== 'movie') {
+      var needEp = 0, haveFile = 0;
+      d.seasons.forEach(function (s) { s.episodes.forEach(function () { needEp++; }); });
+      d.seasons.forEach(function (s) { s.episodes.forEach(function (e) { if (e.file) haveFile++; }); });
+      if (!needEp) { toast('Agrega al menos un episodio.'); return; }
+      if (!haveFile && !(prev && prev.episodes && prev.episodes.length)) { toast('Sube al menos un video de episodio.'); return; }
+    }
+    var btn = $('#vp-adm-publish');
+    if (btn) { btn.disabled = true; btn.textContent = 'Subiendo…'; }
+    var prog = $('#vp-adm-progress');
+    if (prog) { prog.innerHTML = ''; prog.hidden = false; }
+    var id = editId || vpNextId();
+    var relDate = d.releaseDate || (prev && prev.releaseDate) || '';
+
+    vpSdk().then(function (sdk) {
+      var client = vpClient(sdk);
+      var chain = Promise.resolve();
+      var image = (prev && prev.image) || '';
+      var videoUrl = (prev && prev.videoUrl) || '';
+      var epUrls = {};
+      if (prev && prev.episodes) prev.episodes.forEach(function (e) { epUrls[e.season + '-' + e.ep] = e.videoUrl; });
+
+      if (d.posterFile) {
+        chain = chain.then(function () {
+          var set = vpProgRow('Portada');
+          return vpUploadFile(sdk, client, vpKeyPoster(id, d.posterFile.name), d.posterFile, set)
+            .then(function (u) { image = u; });
+        });
+      }
+      if (d.type === 'movie' && d.movieFile) {
+        chain = chain.then(function () {
+          var set = vpProgRow('Película');
+          return vpUploadFile(sdk, client, vpKeyMovie(id, d.movieFile.name), d.movieFile, set)
+            .then(function (u) { videoUrl = u; });
+        });
+      }
+      var newSeasons = d.seasons.map(function (s) {
+        return {
+          season: s.season,
+          episodes: s.episodes.map(function (e) {
+            return { n: e.ep, ep: e.ep, title: e.title, videoUrl: epUrls[s.season + '-' + e.ep] || '', _file: e.file };
+          })
+        };
+      });
+      newSeasons.forEach(function (s) {
+        s.episodes.forEach(function (e) {
+          if (e._file) {
+            (function (ee, ss) {
+              chain = chain.then(function () {
+                var set = vpProgRow('T' + ss + ' E' + ee.ep + (ee.title ? ' · ' + ee.title : ''));
+                return vpUploadFile(sdk, client, vpKeyEpisode(id, ss, ee.ep, ee._file.name), ee._file, set)
+                  .then(function (u) { ee.videoUrl = u; delete ee._file; });
+              });
+            })(e, s.season);
+          } else { delete e._file; }
+        });
+      });
+
+      return chain.then(function () {
+        var anime = vpBuildAnime({
+          id: id, title: d.title, synopsis: d.synopsis, image: image,
+          category: d.category, year: d.year, type: d.type, status: d.status,
+          releaseDate: relDate, videoUrl: videoUrl,
+          seasons: newSeasons, addedAt: (prev && prev.addedAt) || Date.now()
+        });
+        var cat = vpGetCatalog().filter(function (a) { return a.id !== id; });
+        cat.push(anime);
+        return vpPutCatalogJson(sdk, client, cat).then(function () { return cat; });
+      });
+    }).then(function (cat) {
+      vpCatalogSave(cat);
+      toast(editId ? 'Cambios guardados' : '¡Publicado en VetPlex!');
+      vpResetForm();
+      vpAdmTab('gestionar');
+    }).catch(function (err) {
+      toast('Error: ' + (err && err.message ? err.message : 'no se pudo subir'));
+    }).then(function () {
+      if (btn) { btn.disabled = false; btn.textContent = editId ? 'Guardar cambios' : 'Publicar'; }
+    });
+  }
+
+  /* ============ gestionar: editar / borrar ============ */
+  function vpRenderAdmList() {
+    var box = $('#vp-adm-list');
+    if (!box) return;
+    var cat = vpGetCatalog().slice().sort(function (a, b) { return (b.addedAt || 0) - (a.addedAt || 0); });
+    box.innerHTML = '';
+    if (!cat.length) {
+      box.innerHTML = '<p class="vp-empty">Aún no has publicado nada.</p>';
+      return;
+    }
+    cat.forEach(function (a) {
+      var neps = (a.episodes || []).length;
+      var it = document.createElement('div');
+      it.className = 'vp-adm-item';
+      var im = document.createElement('img');
+      im.className = 'vp-adm-thumb'; im.alt = ''; im.loading = 'lazy';
+      im.onerror = function () { im.style.display = 'none'; };
+      if (a.image) im.src = a.image; else im.style.display = 'none';
+      var met = document.createElement('div'); met.className = 'vp-adm-imet';
+      var h4 = document.createElement('h4'); h4.textContent = a.title || 'Sin título';
+      var pp = document.createElement('p');
+      pp.textContent = (a.type === 'movie' ? 'Película' : 'Serie' + (neps ? ' · ' + neps + ' ep.' : '')) +
+        (a.year ? ' · ' + a.year : '') + (a.status === 'airing' ? ' · En emisión' : '');
+      met.appendChild(h4); met.appendChild(pp);
+      var be = document.createElement('button');
+      be.type = 'button'; be.className = 'vp-btn vp-btn-ghost'; be.textContent = 'Editar';
+      var bd = document.createElement('button');
+      bd.type = 'button'; bd.className = 'vp-btn vp-btn-ghost'; bd.textContent = 'Borrar';
+      (function (id) {
+        be.addEventListener('click', function () { vpEditAnime(id); });
+        bd.addEventListener('click', function () { vpDeleteAnime(id); });
+      })(a.id);
+      it.appendChild(im); it.appendChild(met); it.appendChild(be); it.appendChild(bd);
+      box.appendChild(it);
+    });
+  }
+  function vpEditAnime(id) {
+    var a = null, cat = vpGetCatalog();
+    for (var i = 0; i < cat.length; i++) if (cat[i].id === id) { a = cat[i]; break; }
+    if (!a) return;
+    vpEditPrev = a;
+    $('#vp-adm-editid').value = a.id;
+    $('#vp-adm-title').value = a.title || '';
+    $('#vp-adm-syn').value = a.synopsis || '';
+    $('#vp-adm-cat').value = a.category || '';
+    $('#vp-adm-year').value = a.year || '';
+    $('#vp-adm-date').value = '';
+    $('#vp-adm-type').value = a.type === 'movie' ? 'movie' : 'serie';
+    $('#vp-adm-status').value = a.status === 'airing' ? 'airing' : 'complete';
+    vpTypeToggle();
+    var pv = $('#vp-adm-poster-prev');
+    if (pv) pv.innerHTML = a.image
+      ? '<p class="vp-note">Portada actual (se conserva si no subes otra):</p><img src="' + esc(a.image) + '" alt="">'
+      : '';
+    if (a.type !== 'movie') {
+      $('#vp-adm-seasons').value = String((a.seasons || []).length || 1);
+      vpBuildSeasonFields();
+    }
+    $('#vp-adm-cancel-edit').hidden = false;
+    $('#vp-adm-publish').textContent = 'Guardar cambios';
+    vpAdmTab('nuevo');
+    window.scrollTo(0, 0);
+    toast('Editando: ' + a.title);
+  }
+  function vpDeleteAnime(id) {
+    var a = null, cat = vpGetCatalog();
+    for (var i = 0; i < cat.length; i++) if (cat[i].id === id) { a = cat[i]; break; }
+    if (!a) return;
+    if (!confirm('¿Borrar "' + (a.title || '') + '" del catálogo y eliminar sus videos de S3?')) return;
+    toast('Borrando…');
+    vpSdk().then(function (sdk) {
+      var client = vpClient(sdk);
+      var cfg = vpAwsCfg();
+      var prefixes = ['media/images/' + id + '/', 'media/videos/' + id + '/'];
+      var allKeys = [];
+      var p = Promise.resolve();
+      prefixes.forEach(function (px) {
+        p = p.then(function () {
+          return client.send(new sdk.s3.ListObjectsV2Command({ Bucket: cfg.bucket, Prefix: px }))
+            .then(function (r) { (r.Contents || []).forEach(function (o) { allKeys.push(o.Key); }); });
+        });
+      });
+      return p.then(function () {
+        var d = Promise.resolve();
+        for (var i = 0; i < allKeys.length; i += 1000) {
+          (function (ch) {
+            d = d.then(function () {
+              return client.send(new sdk.s3.DeleteObjectsCommand({
+                Bucket: cfg.bucket,
+                Delete: { Objects: ch.map(function (k) { return { Key: k }; }) }
+              }));
+            });
+          })(allKeys.slice(i, i + 1000));
+        }
+        return d;
+      }).then(function () {
+        var nc = vpGetCatalog().filter(function (x) { return x.id !== id; });
+        return vpPutCatalogJson(sdk, client, nc).then(function () { return nc; });
+      });
+    }).then(function (nc) {
+      vpCatalogSave(nc);
+      vpRenderAdmList();
+      toast('Eliminado');
+    }).catch(function (err) {
+      toast('Error al borrar: ' + (err && err.message ? err.message : ''));
+    });
+  }
+
+  /* ============ arranque ============ */
+  function vpAdmInit() {
+    var link = $('#vp-admin-link');
+    if (link) link.addEventListener('click', vpOpenAdmin);
+    var back = $('#vp-admin-back');
+    if (back) back.addEventListener('click', vpCloseAdmin);
+    var enter = $('#vp-adm-enter');
+    if (enter) enter.addEventListener('click', vpGateSubmit);
+    [$('#vp-adm-email'), $('#vp-adm-pin'), $('#vp-adm-pin2')].forEach(function (inp) {
+      if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') vpGateSubmit(); });
+    });
+    var logout = $('#vp-adm-logout');
+    if (logout) logout.addEventListener('click', function () { vpClearSession(); vpShowGate(); toast('Sesión cerrada'); });
+    $$('#vp-view-admin [data-atab]').forEach(function (b) {
+      b.addEventListener('click', function () { vpAdmTab(b.getAttribute('data-atab')); });
+    });
+    var ts = $('#vp-adm-type');
+    if (ts) ts.addEventListener('change', vpTypeToggle);
+    var se = $('#vp-adm-seasons');
+    if (se) se.addEventListener('change', vpBuildSeasonFields);
+    var pf = $('#vp-adm-poster');
+    if (pf) pf.addEventListener('change', function () {
+      var pv = $('#vp-adm-poster-prev');
+      if (!pv) return;
+      var f = pf.files[0];
+      pv.innerHTML = '';
+      if (f) {
+        var im = document.createElement('img');
+        im.alt = 'Vista previa de la portada';
+        try { im.src = URL.createObjectURL(f); } catch (e) {}
+        pv.appendChild(im);
+      }
+    });
+    var form = $('#vp-adm-form');
+    if (form) form.addEventListener('submit', vpPublish);
+    var ce = $('#vp-adm-cancel-edit');
+    if (ce) ce.addEventListener('click', vpResetForm);
+    var ta = $('#vp-adm-test');
+    if (ta) ta.addEventListener('click', vpTestAws);
+    var sa = $('#vp-adm-save-aws');
+    if (sa) sa.addEventListener('click', vpSaveAws);
+  }
+
+  /* Gancho de pruebas (QA): funciones puras */
+  window.vpAdminTest = {
+    vpBuildAnime: vpBuildAnime,
+    vpKeyPoster: vpKeyPoster,
+    vpKeyMovie: vpKeyMovie,
+    vpKeyEpisode: vpKeyEpisode,
+    vpFechaLarga: vpFechaLarga,
+    vpGateCheck: vpGateCheck,
+    vpNextId: vpNextId,
+    vpExt: vpExt,
+    vpBootCatalog: vpBootCatalog,
+    vpReadCachedCatalog: vpReadCachedCatalog,
+    vpCatalogSave: vpCatalogSave,
+    ADMIN_EMAIL: ADMIN_EMAIL
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', vpAdmInit);
+  } else {
+    vpAdmInit();
+  }
+})();
+
+</script>
 </body>
 
   </html>
