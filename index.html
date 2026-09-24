@@ -369,7 +369,8 @@
         });
       }
     };
-    if (document.readyState === 'loading') {
+  
+  if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bindSearchEnter);
     } else {
       bindSearchEnter();
@@ -2305,6 +2306,39 @@
   .vp-ep-prog { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 6px; overflow: hidden; }
   .vp-ep-prog i { display: block; height: 100%; background: #00a8e1; }
 
+
+  /* ---------- Personajes ---------- */
+  .vp-char-rail { align-items: flex-start; }
+  .vp-rail-link { font-size: 13px; color: #00c2ff; font-weight: 600; margin-left: 10px; cursor: pointer; }
+  .vp-char-item { flex: 0 0 auto; width: 92px; text-align: center; cursor: pointer; }
+  .vp-char-ava { position: relative; display: inline-flex; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #1c2b52, #0e1630); border: 2px solid rgba(0, 168, 225, 0.55); }
+  .vp-char-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vp-char-ava-fb { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #9fd8f5; }
+  .vp-ava-lg { width: 96px; height: 96px; }
+  .vp-ava-lg .vp-char-ava-fb { font-size: 36px; }
+  .vp-ava-xl { width: 124px; height: 124px; }
+  .vp-ava-xl .vp-char-ava-fb { font-size: 48px; }
+  .vp-char-item-name { margin-top: 6px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vp-char-mini { margin-top: 6px; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(0, 168, 225, 0.6); background: transparent; color: #00c2ff; cursor: pointer; }
+  .vp-char-mini.on { background: rgba(0, 168, 225, 0.18); color: #bfe9ff; border-color: rgba(0, 168, 225, 0.35); }
+  .vp-char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; padding: 10px 16px 30px; }
+  .vp-char-card { background: #0d1428; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px 10px; text-align: center; cursor: pointer; }
+  .vp-char-card h3 { margin: 8px 0 0; font-size: 14px; font-weight: 700; color: #fff; }
+  .vp-char-anime { margin: 3px 0 0; font-size: 12px; color: #9aa3b8; }
+  .vp-char-count { margin: 6px 0 10px; font-size: 12.5px; color: #cfd6e6; font-weight: 600; }
+  .vp-char-btn { font-size: 13px; font-weight: 700; padding: 8px 22px; border-radius: 999px; border: 1px solid rgba(0, 168, 225, 0.6); background: transparent; color: #00c2ff; cursor: pointer; }
+  .vp-char-btn.on { background: #00a8e1; border-color: #00a8e1; color: #04121f; }
+  .vp-char-btn.big { width: 100%; padding: 11px; font-size: 14px; }
+  .vp-char-btn.ghost { width: 100%; margin-top: 8px; border-color: rgba(255, 255, 255, 0.25); color: #fff; }
+  #vp-char-sheet { position: fixed; inset: 0; z-index: 900; }
+  #vp-char-sheet[hidden] { display: none; }
+  .vp-sheet-scrim { position: absolute; inset: 0; background: rgba(2, 4, 10, 0.62); }
+  .vp-sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #0d1428; border-top: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px 20px 0 0; padding: 20px 20px calc(22px + env(safe-area-inset-bottom)); max-height: 84vh; overflow-y: auto; animation: vpSheetIn 0.25s ease; }
+  @keyframes vpSheetIn { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .vp-sheet-x { position: absolute; top: 8px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+  .vp-sheet-char { text-align: center; padding-top: 4px; }
+  .vp-sheet-char h3 { margin: 10px 0 0; font-size: 20px; font-weight: 800; color: #fff; }
+
   /* ---------- Toast ---------- */
   #vp-toast {
     position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom));
@@ -2338,6 +2372,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <span>Buscar</span>
   </button>
+  <button type="button" data-tab="personajes" aria-label="Personajes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+    <span>Personajes</span>
+  </button>
 </nav>
 
 <!-- Vista: Buscar -->
@@ -2367,6 +2405,12 @@
   <div id="vp-cal-upcoming"></div>
   <h3 class="vp-sec">Ya disponibles</h3>
   <div id="vp-cal-past"></div>
+</section>
+
+<!-- Vista: Personajes -->
+<section id="vp-view-personajes" class="vp-view" aria-label="Personajes">
+  <div class="vp-view-head"><h2>Personajes</h2><p class="vp-view-sub">Sigue a tus personajes favoritos del anime</p></div>
+  <div id="vp-chars-grid" class="vp-char-grid"></div>
 </section>
 
 <!-- Vista: Detalle del anime (estilo Disney+) -->
@@ -2416,6 +2460,14 @@
       <input type="range" id="vp-vol" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
       <button type="button" class="vp-ctl" data-c="fs" aria-label="Pantalla completa">⛶</button>
     </div>
+  </div>
+</div>
+
+<div id="vp-char-sheet" hidden>
+  <div class="vp-sheet-scrim"></div>
+  <div class="vp-sheet" role="dialog" aria-modal="true" aria-label="Detalle del personaje">
+    <button type="button" class="vp-sheet-x" aria-label="Cerrar">×</button>
+    <div id="vp-char-sheet-body"></div>
   </div>
 </div>
 
@@ -2552,7 +2604,7 @@
   }
 
   /* ---------- navegación ---------- */
-  var TABS = ['inicio', 'buscar', 'lista', 'calendario'];
+  var TABS = ['inicio', 'buscar', 'lista', 'calendario', 'personajes'];
   var vpCurrentTab = 'inicio';
   var vpBackStack = [];
   function vpGo(tab) {
@@ -2569,6 +2621,7 @@
     if (vpCurrentTab === 'lista') vpRenderLista();
     if (vpCurrentTab === 'calendario') { vpRenderCalendario(); vpCheckReminders(); }
     if (vpCurrentTab === 'inicio') vpRenderContinue();
+    if (vpCurrentTab === 'personajes') vpRenderPersonajes();
   }
   window.vpGo = vpGo;
 
@@ -3248,6 +3301,7 @@
     if (clr) clr.addEventListener('click', function () { inp.value = ''; vpRenderSearch(); inp.focus(); });
     vpWirePlayer();
     vpRenderContinue();
+    vpRenderCharRail();
     vpInstallAddToList();
     vpFixSearchAnime();
     vpCheckReminders();
@@ -3261,6 +3315,209 @@
     }
     vpGo('inicio');
   }
+  /* ---------- Personajes ---------- */
+  /* Cifras semilla de seguidores: estimaciones internas de fama global por
+     personaje, asignadas por el equipo VetPlex para arrancar la seccion.
+     NO son datos oficiales. El +1 al seguir (y -1 al dejar de seguir) es
+     local y persiste en localStorage (vp_chars_follow_v1). */
+  var VP_CHARACTERS = [
+    { id: 'pikachu', name: 'Pikachu', anime: 'Pokémon', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/a/a6/Pok%C3%A9mon_Pikachu_art.png/250px-Pok%C3%A9mon_Pikachu_art.png', followers: 45000000 },
+    { id: 'goku', name: 'Goku', anime: 'Dragon Ball', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/4/4c/GokumangaToriyama.png/250px-GokumangaToriyama.png', followers: 38000000 },
+    { id: 'naruto', name: 'Naruto Uzumaki', anime: 'Naruto', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/9a/NarutoUzumaki.png/250px-NarutoUzumaki.png', followers: 34000000 },
+    { id: 'luffy', name: 'Monkey D. Luffy', anime: 'One Piece', img: 'https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png', followers: 30000000 },
+    { id: 'totoro', name: 'Totoro', anime: 'Mi vecino Totoro', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/02/My_Neighbor_Totoro_-_Tonari_no_Totoro_%28Movie_Poster%29.jpg/250px-My_Neighbor_Totoro_-_Tonari_no_Totoro_%28Movie_Poster%29.jpg', followers: 28000000 },
+    { id: 'ash', name: 'Ash Ketchum', anime: 'Pokémon', img: 'https://upload.wikimedia.org/wikipedia/en/e/e4/Ash_Ketchum_Journeys.png', followers: 25000000 },
+    { id: 'vegeta', name: 'Vegeta', anime: 'Dragon Ball', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/8/88/Vegeta_Dragon_Ball.jpg/250px-Vegeta_Dragon_Ball.jpg', followers: 24000000 },
+    { id: 'sasuke', name: 'Sasuke Uchiha', anime: 'Naruto', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/4/42/SasukeKishimoto.jpg/250px-SasukeKishimoto.jpg', followers: 22000000 },
+    { id: 'gojo', name: 'Satoru Gojo', anime: 'Jujutsu Kaisen', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/96/SatoruGojomanga.png/250px-SatoruGojomanga.png', followers: 21000000 },
+    { id: 'levi', name: 'Levi Ackerman', anime: 'Attack on Titan', img: 'https://upload.wikimedia.org/wikipedia/en/4/4b/Leviackerman.png', followers: 20000000 },
+    { id: 'eren', name: 'Eren Yeager', anime: 'Attack on Titan', img: 'https://upload.wikimedia.org/wikipedia/en/f/f0/ErenYeagerIsayama.png', followers: 19000000 },
+    { id: 'tanjiro', name: 'Tanjiro Kamado', anime: 'Demon Slayer', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/e/ea/Tanjirou_manga.png/250px-Tanjirou_manga.png', followers: 18000000 },
+    { id: 'nezuko', name: 'Nezuko Kamado', anime: 'Demon Slayer', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/c/c0/NezukoKamado.png/250px-NezukoKamado.png', followers: 18000000 },
+    { id: 'mikasa', name: 'Mikasa Ackerman', anime: 'Attack on Titan', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/1/14/MikasaAkerman.png/250px-MikasaAkerman.png', followers: 17000000 },
+    { id: 'itachi', name: 'Itachi Uchiha', anime: 'Naruto', img: 'https://upload.wikimedia.org/wikipedia/en/e/e5/Itachi_Uchiha.jpg', followers: 17000000 },
+    { id: 'kakashi', name: 'Kakashi Hatake', anime: 'Naruto', img: 'https://upload.wikimedia.org/wikipedia/en/2/2b/Kakashikishimoto.jpg', followers: 16000000 },
+    { id: 'zoro', name: 'Roronoa Zoro', anime: 'One Piece', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/a/a4/Roronoa_Zoro.jpg/250px-Roronoa_Zoro.jpg', followers: 16000000 },
+    { id: 'deku', name: 'Izuku Midoriya', anime: 'My Hero Academia', img: 'https://upload.wikimedia.org/wikipedia/en/d/db/Izuku_Midoriya_%28My_Hero_Academia_character%29.png', followers: 15000000 },
+    { id: 'ichigo', name: 'Ichigo Kurosaki', anime: 'Bleach', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/1/1e/IchigoKurosakiBleach.jpg/250px-IchigoKurosakiBleach.jpg', followers: 14000000 },
+    { id: 'light', name: 'Light Yagami', anime: 'Death Note', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/0c/Light_from_Death_Note.jpg/250px-Light_from_Death_Note.jpg', followers: 14000000 },
+    { id: 'saitama', name: 'Saitama', anime: 'One Punch Man', img: 'https://upload.wikimedia.org/wikipedia/en/9/98/SaitamaWikipediapage.png', followers: 13000000 },
+    { id: 'edward', name: 'Edward Elric', anime: 'Fullmetal Alchemist', img: 'https://upload.wikimedia.org/wikipedia/en/b/b5/Edward85as.JPG', followers: 12000000 },
+    { id: 'inuyasha', name: 'Inuyasha', anime: 'Inuyasha', img: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Inuyashamanga5.jpg', followers: 12000000 },
+    { id: 'sailormoon', name: 'Sailor Moon', anime: 'Sailor Moon', img: 'https://upload.wikimedia.org/wikipedia/en/2/2b/Sailor_Moon_01.jpg', followers: 12000000 },
+    { id: 'sanji', name: 'Sanji', anime: 'One Piece', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/a/aa/Sanji_%28One_Piece%29.jpg/120px-Sanji_%28One_Piece%29.jpg', followers: 11000000 },
+    { id: 'shanks', name: 'Shanks', anime: 'One Piece', img: 'https://static.wikia.nocookie.net/3b9fdf51-9f18-439c-b6d3-b9d991b4ea9a', followers: 11000000 },
+    { id: 'gohan', name: 'Gohan', anime: 'Dragon Ball', img: 'https://static.wikia.nocookie.net/dbpl/images/b/bc/SS2_Ultimate_Gohan.png/revision/latest/scale-to-width-down/340?cb=20141114134307', followers: 11000000 },
+    { id: 'killua', name: 'Killua Zoldyck', anime: 'Hunter x Hunter', img: 'https://upload.wikimedia.org/wikipedia/en/9/93/KilluaZoldyckManga.png', followers: 10000000 },
+    { id: 'gon', name: 'Gon Freecss', anime: 'Hunter x Hunter', img: 'https://upload.wikimedia.org/wikipedia/en/a/a1/GonFreecsmanga.png', followers: 9500000 },
+    { id: 'nami', name: 'Nami', anime: 'One Piece', img: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/Nami_%28One_Piece_Odyssey%29.jpg', followers: 9000000 },
+    { id: 'chopper', name: 'Tony Tony Chopper', anime: 'One Piece', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/f/f6/Tony_Tony_Chopper.jpg/250px-Tony_Tony_Chopper.jpg', followers: 8500000 },
+    { id: 'rengoku', name: 'Kyojuro Rengoku', anime: 'Demon Slayer', img: 'https://i1.wp.com/static.wikia.nocookie.net/kimetsu-no-yaiba/images/f/fd/Kyojuro_anime.png/revision/latest?cb=20191117152140', followers: 8000000 },
+    { id: 'zenitsu', name: 'Zenitsu Agatsuma', anime: 'Demon Slayer', img: 'https://pbs.twimg.com/media/Em12zSoUwAAPqVE.jpg:small', followers: 7500000 },
+    { id: 'charizard', name: 'Charizard', anime: 'Pokémon', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/1/1f/Pok%C3%A9mon_Charizard_art.png/250px-Pok%C3%A9mon_Charizard_art.png', followers: 7000000 },
+    { id: 'hisoka', name: 'Hisoka', anime: 'Hunter x Hunter', img: 'https://pbs.twimg.com/media/EnEnV2AXEAA-qYQ.jpg', followers: 7000000 },
+    { id: 'l', name: 'L', anime: 'Death Note', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/6/6c/L_from_Death_Note.png/250px-L_from_Death_Note.png', followers: 7000000 },
+    { id: 'anya', name: 'Anya Forger', anime: 'Spy x Family', img: 'https://www.pngmart.com/files/23/Anya-Forger-PNG-Photos.png', followers: 6500000 },
+    { id: 'denji', name: 'Denji', anime: 'Chainsaw Man', img: 'https://pbs.twimg.com/media/GEKA3qgbkAAudLv.jpg', followers: 6000000 },
+    { id: 'piccolo', name: 'Piccolo', anime: 'Dragon Ball', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/00/Piccolo_Dragon_Ball.png/250px-Piccolo_Dragon_Ball.png', followers: 6000000 },
+    { id: 'trunks', name: 'Trunks', anime: 'Dragon Ball', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/a/a8/Trunks_Dragon_Ball.jpg/250px-Trunks_Dragon_Ball.jpg', followers: 5500000 },
+    { id: 'freezer', name: 'Freezer', anime: 'Dragon Ball', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/d/dc/Freeza_title_page.jpg/250px-Freeza_title_page.jpg', followers: 5500000 },
+    { id: 'jiraiya', name: 'Jiraiya', anime: 'Naruto', img: 'https://upload.wikimedia.org/wikipedia/en/f/f2/JiraiyaNarutomanga.jpg', followers: 5000000 },
+    { id: 'madara', name: 'Madara Uchiha', anime: 'Naruto', img: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Madara_Uchiha.jpg', followers: 5000000 },
+    { id: 'ace', name: 'Portgas D. Ace', anime: 'One Piece', img: 'https://static.wikia.nocookie.net/fusions-of-crossovers/images/0/0b/Ace_d._portgas_op_d_chara028_sp_ja.png/revision/latest?cb=20230123181025', followers: 4800000 },
+    { id: 'rukia', name: 'Rukia Kuchiki', anime: 'Bleach', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/0c/RukiaKuchikiKubo.jpg/250px-RukiaKuchikiKubo.jpg', followers: 4500000 },
+    { id: 'bakugo', name: 'Katsuki Bakugo', anime: 'My Hero Academia', img: 'https://upload.wikimedia.org/wikipedia/en/0/02/BakugoMHAVol13.png', followers: 4500000 },
+    { id: 'todoroki', name: 'Shoto Todoroki', anime: 'My Hero Academia', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/c/c7/Todoroki_SJG_Spring_2021.png/250px-Todoroki_SJG_Spring_2021.png', followers: 4000000 },
+    { id: 'allmight', name: 'All Might', anime: 'My Hero Academia', img: 'https://pbs.twimg.com/media/Cf7kuGrVAAA53-L.jpg:small', followers: 4000000 },
+    { id: 'rei', name: 'Rei Ayanami', anime: 'Evangelion', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Rei_Ayanami.jpg/250px-Rei_Ayanami.jpg', followers: 4000000 },
+    { id: 'asuka', name: 'Asuka Langley', anime: 'Evangelion', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/2/2f/Asukka13.jpg/250px-Asukka13.jpg', followers: 3800000 },
+    { id: 'spike', name: 'Spike Spiegel', anime: 'Cowboy Bebop', img: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Spike_Spiegel_as_drawn_by_the_creators.jpg', followers: 3500000 },
+    { id: 'yuji', name: 'Yuji Itadori', anime: 'Jujutsu Kaisen', img: 'https://static.wikia.nocookie.net/characterprofile/images/2/2b/Yuji_Itadori_render.webp/revision/latest?cb=20240218073839', followers: 3500000 },
+    { id: 'megumi', name: 'Megumi Fushiguro', anime: 'Jujutsu Kaisen', img: 'https://static.wikia.nocookie.net/abonds-u/images/0/08/Megumi_Fushiguro.png/revision/latest?cb=20211004132501', followers: 3200000 },
+    { id: 'nobara', name: 'Nobara Kugisaki', anime: 'Jujutsu Kaisen', img: 'https://static.wikia.nocookie.net/jujutsu-kaisen/images/b/b7/Nobara_Kugisaki_%28Anime%29.png/revision/latest?cb=20201214153545&path-prefix=pl', followers: 3000000 },
+    { id: 'sukuna', name: 'Sukuna', anime: 'Jujutsu Kaisen', img: 'https://pbs.twimg.com/media/FHOjbKNXMAMrAxF.jpg:small', followers: 3000000 },
+    { id: 'armin', name: 'Armin Arlert', anime: 'Attack on Titan', img: 'https://static.wikia.nocookie.net/51d0bf1c-e3f6-40bc-bbfa-b955103e82d4/scale-to-width/370', followers: 3000000 },
+    { id: 'hinata', name: 'Hinata Hyuga', anime: 'Naruto', img: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/92/HinataHyugagrowth.jpg/250px-HinataHyugagrowth.jpg', followers: 2800000 },
+    { id: 'inosuke', name: 'Inosuke Hashibira', anime: 'Demon Slayer', img: 'https://pbs.twimg.com/media/EG7sTVKX0AEdvL4.jpg:small', followers: 2500000 },
+    { id: 'genos', name: 'Genos', anime: 'One Punch Man', img: 'https://static.wikia.nocookie.net/onepunchman/images/5/5b/Genos_Profile.png/revision/latest/scale-to-width-down/1200?cb=20210325171010', followers: 2500000 },
+    { id: 'power', name: 'Power', anime: 'Chainsaw Man', img: 'https://pbs.twimg.com/media/EhoblqgU8AAf_yE.jpg:small', followers: 2400000 },
+    { id: 'makima', name: 'Makima', anime: 'Chainsaw Man', img: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiocmUrCFoVtNgg1ZKEXUUtQamFapqyzs_Xhif_uinDaF04SqMFacBVR1m2mUU-iH58BIcTrCcTfAU7c6Y4txkCIFf8J-OixTH6x8e9BC-Iw-547jjR0qdy4QmlsIAqcm-2KaBIbBjONpA/s392-h640/5.jpg', followers: 2300000 },
+    { id: 'loid', name: 'Loid Forger', anime: 'Spy x Family', img: 'https://pbs.twimg.com/media/FnpQHSGacAEBppl.jpg:small', followers: 2200000 },
+    { id: 'yor', name: 'Yor Forger', anime: 'Spy x Family', img: 'https://i.pinimg.com/originals/99/95/3b/99953bbd0978363f62d4b1acf5a67fe1.png', followers: 2100000 },
+    { id: 'roy', name: 'Roy Mustang', anime: 'Fullmetal Alchemist', img: 'https://static.wikia.nocookie.net/fma/images/5/5b/MustangManga.png/revision/latest?cb=20250220111436', followers: 2000000 },
+    { id: 'chihiro', name: 'Chihiro', anime: 'El viaje de Chihiro', img: 'https://lunar-merch.b-cdn.net/spiritedawaymerchandise.com/media/1321/ec1458f5-40be-4c59-b66f-1f3b2f01bfdc.png', followers: 2000000 },
+    { id: 'kurapika', name: 'Kurapika', anime: 'Hunter x Hunter', img: 'https://upload.wikimedia.org/wikipedia/en/6/6e/Kurapikaimageinfobox.png', followers: 1800000 },
+  ];
+
+  var CHAR_KEY = 'vp_chars_follow_v1';
+  function vpCharFollows() { var v = store.get(CHAR_KEY, []); return Array.isArray(v) ? v : []; }
+  function vpCharIsFollowing(id) { return vpCharFollows().indexOf(id) !== -1; }
+  function vpCharById(id) {
+    for (var i = 0; i < VP_CHARACTERS.length; i++) if (VP_CHARACTERS[i].id === id) return VP_CHARACTERS[i];
+    return null;
+  }
+  function vpCharFmt(n) {
+    n = Math.max(0, Math.round(n || 0));
+    if (n >= 1000000) { var m = n / 1000000; return (m >= 100 ? Math.round(m) : (Math.round(m * 10) / 10)) + ' M'; }
+    if (n >= 1000) return Math.round(n / 1000) + ' mil';
+    return String(n);
+  }
+  function vpCharCount(c) { return (c.followers || 0) + (vpCharIsFollowing(c.id) ? 1 : 0); }
+  function vpCharAvatar(c, cls) {
+    var initial = esc(String((c.name || '?').charAt(0)).toUpperCase());
+    return '<span class="vp-char-ava ' + (cls || '') + '">' +
+      '<img src="' + esc(c.img) + '" alt="' + esc(c.name) + '" loading="lazy"' +
+      ' onerror="this.style.display=\'none\';var f=this.nextElementSibling;if(f){f.style.display=\'flex\';}">' +
+      '<span class="vp-char-ava-fb" style="display:none" aria-hidden="true">' + initial + '</span></span>';
+  }
+  function vpCharToggle(id) {
+    var c = vpCharById(id); if (!c) return;
+    var f = vpCharFollows();
+    var i = f.indexOf(id), now;
+    if (i === -1) { f.push(id); now = true; } else { f.splice(i, 1); now = false; }
+    store.set(CHAR_KEY, f);
+    $$('[data-char-follow="' + id + '"]').forEach(function (b) {
+      b.classList.toggle('on', now);
+      b.textContent = now ? '✓ Siguiendo' : 'Seguir';
+    });
+    $$('[data-char-count="' + id + '"]').forEach(function (s) { s.textContent = vpCharFmt(vpCharCount(c)); });
+    toast(now ? 'Ahora sigues a ' + c.name : 'Dejaste de seguir a ' + c.name);
+  }
+  function vpWireCharList(root, openFn) {
+    root.querySelectorAll('[data-char-open]').forEach(function (el) {
+      el.addEventListener('click', function (ev) {
+        if (ev.target.closest('[data-char-follow]')) return;
+        openFn(el.getAttribute('data-char-open'));
+      });
+    });
+    root.querySelectorAll('[data-char-follow]').forEach(function (b) {
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); vpCharToggle(b.getAttribute('data-char-follow')); });
+    });
+  }
+  /* Riel "Personajes" en Inicio */
+  function vpRenderCharRail() {
+    var home = $('#vp-view-inicio'), hero = $('#vp-hero');
+    if (!home || !hero) return;
+    var wrap = $('#vp-chars-wrap');
+    if (!wrap) { wrap = document.createElement('div'); wrap.className = 'carousel-container'; wrap.id = 'vp-chars-wrap'; }
+    var html = '<div class="carousel-title">Personajes<span class="vp-rail-link" id="vp-chars-all">Ver todos ›</span></div>' +
+      '<div class="carousel vp-rail vp-char-rail">';
+    VP_CHARACTERS.slice(0, 20).forEach(function (c) {
+      var on = vpCharIsFollowing(c.id);
+      html += '<div class="vp-char-item" data-char-open="' + esc(c.id) + '">' + vpCharAvatar(c, '') +
+        '<div class="vp-char-item-name">' + esc(c.name) + '</div>' +
+        '<button type="button" class="vp-char-mini' + (on ? ' on' : '') + '" data-char-follow="' + esc(c.id) + '">' +
+        (on ? '✓ Siguiendo' : 'Seguir') + '</button></div>';
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+    var ref = $('#vp-continue-wrap');
+    if (ref) ref.parentNode.insertBefore(wrap, ref.nextSibling);
+    else hero.parentNode.insertBefore(wrap, hero.nextSibling);
+    $('#vp-chars-all').addEventListener('click', function () { vpGo('personajes'); });
+    vpWireCharList(wrap, vpOpenCharSheet);
+  }
+  /* Vista Personajes: rejilla ordenada por seguidores */
+  function vpRenderPersonajes() {
+    var grid = $('#vp-chars-grid');
+    if (!grid) return;
+    var list = VP_CHARACTERS.slice().sort(function (x, y) { return (y.followers || 0) - (x.followers || 0); });
+    var html = '';
+    list.forEach(function (c) {
+      var on = vpCharIsFollowing(c.id);
+      html += '<article class="vp-char-card" data-char-open="' + esc(c.id) + '">' + vpCharAvatar(c, 'vp-ava-lg') +
+        '<h3>' + esc(c.name) + '</h3>' +
+        '<p class="vp-char-anime">' + esc(c.anime) + '</p>' +
+        '<p class="vp-char-count"><span data-char-count="' + esc(c.id) + '">' + esc(vpCharFmt(vpCharCount(c))) + '</span> seguidores</p>' +
+        '<button type="button" class="vp-char-btn' + (on ? ' on' : '') + '" data-char-follow="' + esc(c.id) + '">' +
+        (on ? '✓ Siguiendo' : 'Seguir') + '</button></article>';
+    });
+    grid.innerHTML = html;
+    vpWireCharList(grid, vpOpenCharSheet);
+  }
+  /* Hoja de detalle del personaje */
+  function vpOpenCharSheet(id) {
+    var c = vpCharById(id); if (!c) return;
+    var sheet = $('#vp-char-sheet'), body = $('#vp-char-sheet-body');
+    if (!sheet || !body) return;
+    var on = vpCharIsFollowing(c.id);
+    var anime = null;
+    try { anime = (typeof vpFindAnime === 'function') ? vpFindAnime(c.anime) : null; } catch (e) { anime = null; }
+    body.innerHTML = '<div class="vp-sheet-char">' + vpCharAvatar(c, 'vp-ava-xl') +
+      '<h3>' + esc(c.name) + '</h3>' +
+      '<p class="vp-char-anime">' + esc(c.anime) + '</p>' +
+      '<p class="vp-char-count"><span data-char-count="' + esc(c.id) + '">' + esc(vpCharFmt(vpCharCount(c))) + '</span> seguidores</p>' +
+      '<button type="button" class="vp-char-btn big' + (on ? ' on' : '') + '" data-char-follow="' + esc(c.id) + '">' +
+      (on ? '✓ Siguiendo' : 'Seguir') + '</button>' +
+      (anime ? '<button type="button" class="vp-char-btn ghost" id="vp-char-see-anime">Ver anime</button>' : '') + '</div>';
+    sheet.hidden = false;
+    document.body.style.overflow = 'hidden';
+    vpWireCharList(body, function () {});
+    var see = $('#vp-char-see-anime');
+    if (see && anime) see.addEventListener('click', function () { vpCloseCharSheet(); vpOpenDetail(anime); });
+  }
+  function vpCloseCharSheet() {
+    var sheet = $('#vp-char-sheet');
+    if (sheet) sheet.hidden = true;
+    document.body.style.overflow = '';
+  }
+  (function vpWireCharSheet() {
+    var sheet = $('#vp-char-sheet');
+    if (!sheet || sheet.dataset.wired) return;
+    sheet.dataset.wired = '1';
+    var scrim = sheet.querySelector('.vp-sheet-scrim');
+    if (scrim) scrim.addEventListener('click', vpCloseCharSheet);
+    var x = sheet.querySelector('.vp-sheet-x');
+    if (x) x.addEventListener('click', vpCloseCharSheet);
+  })();
+  window.vpCharToggle = vpCharToggle;
+  window.vpCharFmt = vpCharFmt;
+  window.vpOpenCharSheet = vpOpenCharSheet;
+  window.vpRenderCharRail = vpRenderCharRail;
+  window.vpRenderPersonajes = vpRenderPersonajes;
+  window.vpCharIsFollowing = vpCharIsFollowing;
+  window.VP_CHARACTERS = VP_CHARACTERS;
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       vpInit();
