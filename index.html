@@ -1002,14 +1002,13 @@
     <div class="logo">VetPlex</div>
   </header>
 
-  <!-- Héroe "Lo mejor de VetPlex": lo llena el algoritmo con el top 5 del catálogo -->
+  <!-- Héroe destacado: lo llena el algoritmo con el top 5 del catálogo -->
   <div class="banner" id="vp-hero">
     <img class="banner-image" id="vp-hero-img" alt="Anime destacado">
     <div class="banner-shade"></div>
     <div class="banner-content">
-      <div class="vp-hero-kicker"><span class="vp-hero-star">★</span> Lo mejor de VetPlex</div>
       <div class="banner-title" id="vp-hero-title">VetPlex</div>
-      <div class="banner-meta" id="vp-hero-meta"></div>
+      <div class="banner-meta-row"><span class="vp-badge vp-badge-serie" id="vp-hero-badge">Anime</span><span class="banner-meta" id="vp-hero-meta"></span></div>
       <div class="banner-description" id="vp-hero-desc">Cargando destacados…</div>
       <div class="banner-buttons">
         <button type="button" class="banner-button vp-btn-primary" id="vp-hero-details">▶ Ver Detalles</button>
@@ -1227,7 +1226,7 @@
       fillRail(rails.recomendados, byNew);
       renderHero(items);
     }
-    /* Héroe "Lo mejor de VetPlex": puntuación = promedio de votos ×2.2 +
+    /* Héroe destacado: puntuación = promedio de votos ×2.2 +
        cantidad de votos ×0.35 + novedad ×1.6 + tiene imagen ×0.6.
        Rota el top 5 cada 8 segundos. */
     let vpHeroList = [], vpHeroIdx = 0, vpHeroTimer = null;
@@ -1246,18 +1245,26 @@
       const meta = document.getElementById('vp-hero-meta');
       const desc = document.getElementById('vp-hero-desc');
       const dots = document.getElementById('vp-hero-dots');
+      const badge = document.getElementById('vp-hero-badge');
+      const content = document.querySelector('#vp-hero .banner-content');
       if (!a || !img || !title) return;
+      const isMovie = /pel[ií]cula|movie|film|largometraje/i.test([a.type, a.category, a.subcategory].join(' '));
       const swap = () => {
         img.src = a.imageUrl || a.image; img.alt = a.title;
         title.textContent = a.title;
         const bits = [a.year, a.category].filter(Boolean);
         if (meta) meta.textContent = bits.join('  •  ');
+        if (badge) {
+          badge.textContent = isMovie ? 'Película' : 'Anime';
+          badge.className = 'vp-badge ' + (isMovie ? 'vp-badge-movie' : 'vp-badge-serie');
+        }
         if (desc) desc.textContent = a.synopsis || '';
         if (dots) dots.innerHTML = vpHeroList.map((_, i) =>
           '<button type="button" data-i="' + i + '" class="' + (i === vpHeroIdx ? 'on' : '') + '" aria-label="Destacado ' + (i + 1) + '"></button>').join('');
       };
       img.style.opacity = '0';
-      setTimeout(() => { swap(); img.style.opacity = '1'; }, 300);
+      if (content) content.style.opacity = '0';
+      setTimeout(() => { swap(); img.style.opacity = '1'; if (content) content.style.opacity = '1'; }, 300);
     }
     function renderHero(animes) {
       const items = (animes || []).filter(a => a && a.title && String(a.title).trim() && (a.imageUrl || a.image));
@@ -1273,6 +1280,12 @@
         const bits = [a.year, a.category].filter(Boolean);
         const meta = document.getElementById('vp-hero-meta');
         if (meta) meta.textContent = bits.join('  •  ');
+        const badge = document.getElementById('vp-hero-badge');
+        if (badge) {
+          const isMovie = /pel[ií]cula|movie|film|largometraje/i.test([a.type, a.category, a.subcategory].join(' '));
+          badge.textContent = isMovie ? 'Película' : 'Anime';
+          badge.className = 'vp-badge ' + (isMovie ? 'vp-badge-movie' : 'vp-badge-serie');
+        }
         const desc = document.getElementById('vp-hero-desc');
         if (desc) desc.textContent = a.synopsis || '';
         const dots = document.getElementById('vp-hero-dots');
@@ -1914,11 +1927,10 @@
         linear-gradient(0deg, var(--vp-bg-deep) 2%, rgba(6, 9, 19, 0) 46%);
     }
     .banner-content { left: 20px !important; right: 20px !important; bottom: 36px !important; max-width: 600px; }
-    .vp-hero-kicker {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
-      color: var(--vp-accent); margin-bottom: 8px;
-    }
+    .banner-content { transition: opacity 0.3s ease; }
+    .banner-meta-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .banner-meta-row .vp-badge { margin-top: 0; }
+    .banner-meta-row .banner-meta { margin-top: 0; }
     .banner-title {
       color: #ffffff !important; font-size: clamp(26px, 7vw, 44px) !important;
       font-weight: 800 !important; line-height: 1.05; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
