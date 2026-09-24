@@ -2218,22 +2218,92 @@
   .vp-bell:hover { background: rgba(255, 255, 255, 0.12) !important; background-color: rgba(255,255,255,0.12) !important; }
   .vp-bell.on { background: rgba(0, 168, 225, 0.16) !important; border-color: #00a8e1 !important; color: #00a8e1; }
 
-  /* ---------- Reproductor (en blanco por ahora) ---------- */
-  #vp-player-blank {
-    position: fixed; inset: 0; z-index: 900; background: #000;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; color: #fff; text-align: center; padding: 24px;
+  /* ---------- Reproductor VetPlex ---------- */
+  #vp-player {
+    position: fixed; inset: 0; z-index: 900; background: #000; color: #fff;
+    display: flex; flex-direction: column;
   }
-  #vp-player-blank[hidden] { display: none; }
-  #vp-player-blank .vp-back { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 14px; margin: 0 !important; }
-  .vp-player-ring {
-    width: 86px; height: 86px; border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 30px; color: #fff;
+  #vp-player[hidden] { display: none; }
+  #vp-player-stage { position: relative; flex: 1; min-height: 0; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #vp-video { width: 100%; height: 100%; background: #000; }
+  #vp-video[hidden], #vp-player-yt[hidden] { display: none; }
+  #vp-player-yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #vp-player-top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+    display: flex; align-items: center; gap: 12px;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 30px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.75), transparent);
+    pointer-events: none;
   }
-  #vp-player-title { font-size: 16px; font-weight: 700; max-width: 80vw; }
-  .vp-player-sub { color: #9aa3b8; font-size: 13.5px; margin: 0; }
+  #vp-player-top > * { pointer-events: auto; }
+  #vp-player .vp-back { position: static !important; margin: 0 !important; flex: 0 0 auto; }
+  #vp-player-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #vp-player-nextbtn {
+    flex: 0 0 auto; background: rgba(0,168,225,0.18); border: 1px solid rgba(0,168,225,0.6);
+    color: #fff; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  }
+  #vp-player-nextbtn[hidden] { display: none; }
+  #vp-player-controls {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+    padding: 34px 14px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, rgba(0,0,0,0.85), transparent);
+  }
+  #vp-seek { position: relative; height: 22px; cursor: pointer; touch-action: none; outline: none; }
+  #vp-seek::before { content: ""; position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.25); }
+  #vp-seek-buf { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.45); width: 0; }
+  #vp-seek-play { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 2px; background: #00a8e1; width: 0; }
+  #vp-seek-knob { position: absolute; top: 11px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transform: translate(-50%,-50%); left: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+  #vp-controls-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+  #vp-time { font-size: 12px; color: #cfd6e4; margin-right: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vp-ctl {
+    background: transparent; border: 0; color: #fff; font-size: 15px; font-weight: 700;
+    min-width: 42px; min-height: 42px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+  .vp-ctl:active { background: rgba(255,255,255,0.14); }
+  .vp-ctl small { font-size: 9px; font-weight: 700; margin: 0 1px; }
+  #vp-ctl-play { font-size: 22px; }
+  #vp-vol { width: 64px; accent-color: #00a8e1; }
+  #vp-player-spinner {
+    position: absolute; z-index: 5; width: 52px; height: 52px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.25); border-top-color: #00a8e1;
+    animation: vp-spin 0.9s linear infinite;
+  }
+  #vp-player-spinner[hidden] { display: none; }
+  @keyframes vp-spin { to { transform: rotate(360deg); } }
+  .vp-player-state {
+    position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px;
+    background: radial-gradient(120% 100% at 50% 0%, #101a33 0%, #05080f 70%);
+  }
+  .vp-player-state[hidden] { display: none; }
+  .vp-player-state img { width: 120px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  .vp-player-state h3 { margin: 4px 0 0; font-size: 16px; }
+  .vp-player-state p { margin: 0; color: #9aa3b8; font-size: 13.5px; max-width: 78vw; }
+  #vp-player-next {
+    position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; background: rgba(0,0,0,0.72);
+    text-align: center; padding: 24px;
+  }
+  #vp-player-next[hidden] { display: none; }
+  #vp-next-count { font-size: 15px; font-weight: 700; }
+  #vp-next-title { color: #9aa3b8; font-size: 13px; }
+  /* ---------- Seguir viendo ---------- */
+  .vp-cont-card { position: relative; flex: 0 0 auto; width: 168px; scroll-snap-align: start; cursor: pointer; }
+  .vp-cont-thumb { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 4px 14px rgba(0,0,0,0.45); aspect-ratio: 16/9; background: #101a33; }
+  .vp-cont-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vp-cont-x {
+    position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.25); color: #fff;
+    font-size: 14px; line-height: 1; cursor: pointer; z-index: 2;
+  }
+  .vp-cont-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.25); }
+  .vp-cont-bar i { display: block; height: 100%; background: #00a8e1; }
+  .vp-cont-meta { padding: 7px 2px 0; }
+  .vp-cont-meta h3 { margin: 0; font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vp-cont-meta p { margin: 2px 0 0; font-size: 11.5px; color: #9aa3b8; }
+  .vp-ep-prog { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 6px; overflow: hidden; }
+  .vp-ep-prog i { display: block; height: 100%; background: #00a8e1; }
 
   /* ---------- Toast ---------- */
   #vp-toast {
@@ -2302,12 +2372,51 @@
 <!-- Vista: Detalle del anime (estilo Disney+) -->
 <section id="vp-view-detalle" class="vp-view" aria-label="Detalle"></section>
 
-<!-- Reproductor en blanco (el sistema de video llega después) -->
-<div id="vp-player-blank" hidden>
-  <button type="button" class="vp-back" id="vp-player-back" aria-label="Volver">‹</button>
-  <div class="vp-player-ring">▶</div>
-  <div id="vp-player-title"></div>
-  <p class="vp-player-sub">Reproductor de video — próximamente</p>
+<!-- Reproductor de video VetPlex -->
+<div id="vp-player" hidden>
+  <div id="vp-player-stage">
+    <video id="vp-video" playsinline preload="metadata" hidden></video>
+    <iframe id="vp-player-yt" hidden allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="Tráiler"></iframe>
+    <div id="vp-player-spinner" hidden></div>
+    <div id="vp-player-empty" class="vp-player-state" hidden>
+      <img id="vp-player-empty-img" alt="">
+      <h3 id="vp-player-empty-title"></h3>
+      <p>El video de este título aún no está disponible.<br>Estamos preparándolo para ti.</p>
+    </div>
+    <div id="vp-player-error" class="vp-player-state" hidden>
+      <h3>No se pudo cargar el video</h3>
+      <p>Revisa tu conexión e inténtalo de nuevo.</p>
+      <button type="button" class="vp-btn vp-btn-primary" id="vp-player-retry">Reintentar</button>
+    </div>
+    <div id="vp-player-next" hidden>
+      <div id="vp-next-count">Siguiente episodio en 5…</div>
+      <div id="vp-next-title"></div>
+      <div style="display:flex;gap:10px">
+        <button type="button" class="vp-btn vp-btn-primary" id="vp-next-now">Reproducir ahora</button>
+        <button type="button" class="vp-btn vp-btn-ghost" id="vp-next-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <div id="vp-player-top">
+    <button type="button" class="vp-back" id="vp-player-back" aria-label="Volver">‹</button>
+    <div id="vp-player-title"></div>
+    <button type="button" id="vp-player-nextbtn" hidden>Siguiente episodio ›</button>
+  </div>
+  <div id="vp-player-controls">
+    <div id="vp-seek" role="slider" aria-label="Progreso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+      <div id="vp-seek-buf"></div><div id="vp-seek-play"></div><div id="vp-seek-knob"></div>
+    </div>
+    <div id="vp-controls-row">
+      <span id="vp-time">0:00 / 0:00</span>
+      <button type="button" class="vp-ctl" data-c="rw" aria-label="Retroceder 10 segundos">↺<small>10</small></button>
+      <button type="button" class="vp-ctl" id="vp-ctl-play" data-c="play" aria-label="Reproducir o pausar">▶</button>
+      <button type="button" class="vp-ctl" data-c="ff" aria-label="Avanzar 10 segundos"><small>10</small>↻</button>
+      <button type="button" class="vp-ctl" id="vp-ctl-speed" data-c="speed" aria-label="Velocidad">1x</button>
+      <button type="button" class="vp-ctl" id="vp-ctl-mute" data-c="mute" aria-label="Silenciar">🔊</button>
+      <input type="range" id="vp-vol" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
+      <button type="button" class="vp-ctl" data-c="fs" aria-label="Pantalla completa">⛶</button>
+    </div>
+  </div>
 </div>
 
 <div id="vp-toast" role="status" aria-live="polite"></div>
@@ -2428,7 +2537,7 @@
   function vpEpisodes(a) {
     if (a && Array.isArray(a.episodes) && a.episodes.length) {
       return a.episodes.map(function (e, i) {
-        return { n: (e && e.n) || i + 1, title: (e && e.title) || '' };
+        return { n: (e && e.n) || i + 1, title: (e && e.title) || '', videoUrl: (e && e.videoUrl) || '' };
       });
     }
     var c = parseInt(a && a.episodeCount, 10);
@@ -2459,6 +2568,7 @@
     if (vpCurrentTab === 'buscar') vpRenderSearch();
     if (vpCurrentTab === 'lista') vpRenderLista();
     if (vpCurrentTab === 'calendario') { vpRenderCalendario(); vpCheckReminders(); }
+    if (vpCurrentTab === 'inicio') vpRenderContinue();
   }
   window.vpGo = vpGo;
 
@@ -2514,18 +2624,19 @@
     html += '</div></div>';
     if (a.synopsis) html += '<p class="vp-det-syn">' + esc(a.synopsis) + '</p>';
     html += '<div class="vp-det-actions">';
-    html += '<button type="button" class="vp-btn vp-btn-primary" data-act="play">▶ ' + (movie ? 'Ver película' : 'Ver ahora') + '</button>';
+    var contAll = vpContGet();
+    var hasCont = Object.keys(contAll).some(function (k) { return contAll[k] && contAll[k].animeKey === key; });
+    html += '<button type="button" class="vp-btn vp-btn-primary" data-act="play">▶ ' + (movie ? 'Ver película' : (hasCont ? 'Continuar' : 'Ver ahora')) + '</button>';
     html += '<button type="button" class="vp-btn vp-btn-ghost" data-act="list">' + (inList ? '✓ En mi lista' : '＋ Mi Lista') + '</button>';
     html += '</div>';
     if (!movie) {
       html += '<h3 class="vp-sec" style="margin-left:0">Episodios</h3><div id="vp-eps"></div>';
     }
-    html += '<p class="vp-note">El reproductor de video llegará en una próxima actualización.</p>';
     html += '</div>';
     v.innerHTML = html;
 
     var bPlay = v.querySelector('[data-act="play"]');
-    if (bPlay) bPlay.addEventListener('click', function () { vpOpenPlayer(a.title || ''); });
+    if (bPlay) bPlay.addEventListener('click', function () { vpOpenPlayer(a); });
     var bList = v.querySelector('[data-act="list"]');
     if (bList) bList.addEventListener('click', function () {
       if (vpListHas(key)) { vpListRemove(key); toast('Eliminado de tu lista'); }
@@ -2538,32 +2649,355 @@
     });
     if (!movie) {
       var box = $('#vp-eps', v);
-      vpEpisodes(a).forEach(function (e) {
+      var eps = vpEpisodes(a);
+      var contMap = vpContGet();
+      eps.forEach(function (e, i) {
         var row = document.createElement('button');
         row.type = 'button';
         row.className = 'vp-ep';
+        var ce = contMap[key + '#e' + i];
+        var prog = '';
+        if (ce && ce.d > 0 && ce.t / ce.d < 0.95) {
+          prog = '<span class="vp-ep-prog"><i style="width:' + (ce.t / ce.d * 100).toFixed(1) + '%"></i></span>';
+        }
         row.innerHTML = '<span class="vp-ep-thumb">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') + '</span>' +
           '<span class="vp-ep-body"><span class="vp-ep-num">Episodio ' + e.n + '</span>' +
-          '<span class="vp-ep-title">' + (e.title ? esc(e.title) : 'Episodio ' + e.n) + '</span></span>' +
+          '<span class="vp-ep-title">' + (e.title ? esc(e.title) : 'Episodio ' + e.n) + '</span>' + prog + '</span>' +
           '<span class="vp-ep-play">▶</span>';
-        row.addEventListener('click', function () { vpOpenPlayer((a.title || '') + ' · Episodio ' + e.n); });
+        row.addEventListener('click', function () { vpOpenPlayer(a, i); });
         box.appendChild(row);
       });
     }
   }
 
-  /* ---------- reproductor en blanco ---------- */
-  function vpOpenPlayer(label) {
-    $('#vp-player-title').textContent = label || '';
-    $('#vp-player-blank').hidden = false;
+  /* ============================================================
+     Reproductor de video VetPlex + Seguir viendo
+     Contrato de datos (solo lectura; Firebase no se toca):
+       Película : a.videoUrl                → mp4/m3u8 directo
+       Episodio : a.episodes[i].videoUrl     (y .title opcional)
+       Tráiler  : a.trailerUrl || a.trailer  (URL de YouTube, fallback embebido)
+     Sin URLs → estado elegante dentro del player, nunca pantalla negra.
+     Progreso: localStorage 'vp_continue_v1', clave animeKey+'#e'+idx
+     (películas: animeKey+'#film'). Se saca del riel al llegar al 95%.
+     ============================================================ */
+  var CONT_KEY = 'vp_continue_v1';
+  function vpContGet() { return store.get(CONT_KEY, {}); }
+  function vpContSet(all) { store.set(CONT_KEY, all); }
+  function vpContKeyOf(e) { return e.animeKey + (e.movie ? '#film' : '#e' + e.epIdx); }
+  function vpFmtT(s) {
+    s = Math.max(0, Math.floor(s || 0));
+    var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+    return (h ? h + ':' + ('0' + m).slice(-2) : m) + ':' + ('0' + ss).slice(-2);
+  }
+  function vpYtId(u) {
+    if (!u) return '';
+    var m = String(u).match(/(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+    return m ? m[1] : '';
+  }
+  /* Resuelve la fuente: {kind:'video'|'youtube'|'none', url} */
+  function vpResolveSource(a, ep) {
+    var v = (ep && ep.videoUrl) || (a && a.videoUrl) || '';
+    if (v) return { kind: 'video', url: v };
+    var yt = vpYtId((a && (a.trailerUrl || a.trailer)) || '');
+    if (yt) return { kind: 'youtube', url: 'https://www.youtube.com/embed/' + yt + '?autoplay=1&rel=0' };
+    return { kind: 'none', url: '' };
+  }
+
+  var vpPlay = { a: null, episodes: [], idx: 0, movie: false, key: '', ckey: '', kind: 'none', resumeT: 0, lastSave: 0, nextTimer: null };
+
+  function vpOpenPlayer(a, epIdx, resumeT) {
+    /* compat: vpOpenPlayer("Título · Episodio 3") */
+    if (typeof a === 'string') {
+      var lbl = a, n = null;
+      var mm = lbl.match(/Episodio\s+(\d+)/i);
+      if (mm) { n = parseInt(mm[1], 10); lbl = lbl.split('·')[0].trim(); }
+      var found = (typeof vpFindAnime === 'function') ? vpFindAnime(lbl) : null;
+      if (found) {
+        var feps = vpEpisodes(found);
+        var fix = -1;
+        if (n != null) {
+          for (var fi = 0; fi < feps.length; fi++) { if (feps[fi].n === n) { fix = fi; break; } }
+          if (fix < 0) fix = n - 1;
+        }
+        return vpOpenPlayer(found, fix >= 0 ? fix : undefined);
+      }
+      a = { title: lbl };
+    }
+    if (!a) return;
+    vpClearNext();
+    var movie = vpIsMovie(a);
+    var eps = movie ? [] : vpEpisodes(a);
+    var key = vpAnimeKey(a);
+    var cont = vpContGet();
+    var idx = (typeof epIdx === 'number') ? epIdx : null;
+    var t0 = resumeT || 0;
+    if (idx == null) {
+      var best = null;
+      Object.keys(cont).forEach(function (k) {
+        var e = cont[k];
+        if (e && e.animeKey === key && (!best || (e.updatedAt || 0) > (best.updatedAt || 0))) best = e;
+      });
+      if (best) { idx = best.movie ? 0 : best.epIdx; t0 = t0 || best.t || 0; }
+    }
+    if (idx == null) idx = 0;
+    idx = Math.max(0, Math.min(idx, Math.max(0, eps.length - 1)));
+    var ep = eps[idx] || null;
+    var src = vpResolveSource(a, ep);
+    vpPlay = { a: a, episodes: eps, idx: idx, movie: movie, key: key,
+      ckey: movie ? key + '#film' : key + '#e' + idx,
+      kind: src.kind, resumeT: t0, lastSave: 0, nextTimer: null };
+
+    var title = a.title || 'Sin título';
+    if (!movie) title += ' · Episodio ' + ((ep && ep.n) || (idx + 1));
+    $('#vp-player-title').textContent = title;
+
+    var vid = $('#vp-video'), yt = $('#vp-player-yt');
+    $('#vp-player-empty').hidden = true;
+    $('#vp-player-error').hidden = true;
+    $('#vp-player-spinner').hidden = true;
+    yt.hidden = true; yt.removeAttribute('src');
+    $('#vp-player-controls').style.display = '';
+    $('#vp-player-nextbtn').hidden = !(!movie && idx < eps.length - 1);
+    $('#vp-ctl-play').textContent = '▶';
+    vpUpdateTime();
+
+    if (src.kind === 'video') {
+      vid.hidden = false;
+      if (vid.getAttribute('src') !== src.url) vid.src = src.url;
+      else if (vpPlay.resumeT > 0) { try { vid.currentTime = vpPlay.resumeT; } catch (e) {} vpPlay.resumeT = 0; }
+      vid.playbackRate = 1; $('#vp-ctl-speed').textContent = '1x';
+      var pr = vid.play();
+      if (pr && pr.catch) pr.catch(function () {});
+    } else if (src.kind === 'youtube') {
+      vid.hidden = true; vid.removeAttribute('src'); vid.load();
+      yt.hidden = false; yt.src = src.url;
+    } else {
+      vid.hidden = true; vid.removeAttribute('src'); vid.load();
+      $('#vp-player-controls').style.display = 'none';
+      var im = $('#vp-player-empty-img'), art = a.imageUrl || a.image || '';
+      if (art) {
+        im.style.display = ''; im.onerror = function () { im.style.display = 'none'; }; im.src = art;
+      } else im.style.display = 'none';
+      $('#vp-player-empty-title').textContent = title;
+      $('#vp-player-empty').hidden = false;
+    }
+    $('#vp-player').hidden = false;
     document.body.style.overflow = 'hidden';
   }
+
   function vpClosePlayer() {
-    $('#vp-player-blank').hidden = true;
+    vpClearNext();
+    vpSaveProgress();
+    var vid = $('#vp-video');
+    if (vid) { try { vid.pause(); } catch (e) {} vid.removeAttribute('src'); vid.load(); }
+    var yt = $('#vp-player-yt');
+    if (yt) { yt.hidden = true; yt.removeAttribute('src'); }
+    $('#vp-player').hidden = true;
     document.body.style.overflow = '';
+    vpRenderContinue();
   }
   window.vpOpenPlayer = vpOpenPlayer;
   window.vpClosePlayer = vpClosePlayer;
+
+  function vpSaveProgress() {
+    var vid = $('#vp-video');
+    if (!vid || vpPlay.kind !== 'video') return;
+    var d = vid.duration, t = vid.currentTime || 0;
+    if (!d || !isFinite(d) || d <= 0) return;
+    var all = vpContGet();
+    if (t / d >= 0.95) {
+      if (all[vpPlay.ckey]) { delete all[vpPlay.ckey]; vpContSet(all); }
+      return;
+    }
+    if (t < 3) return;
+    var ep = vpPlay.episodes[vpPlay.idx] || null;
+    all[vpPlay.ckey] = {
+      animeKey: vpPlay.key, epIdx: vpPlay.movie ? null : vpPlay.idx, movie: vpPlay.movie,
+      title: (vpPlay.a && vpPlay.a.title) || '', image: (vpPlay.a && (vpPlay.a.imageUrl || vpPlay.a.image)) || '',
+      epLabel: vpPlay.movie ? 'Película' : 'Episodio ' + ((ep && ep.n) || (vpPlay.idx + 1)),
+      t: Math.floor(t), d: Math.floor(d), updatedAt: Date.now()
+    };
+    vpContSet(all);
+  }
+
+  function vpOnEnded() {
+    vpSaveProgress();
+    if (!vpPlay.movie && vpPlay.idx < vpPlay.episodes.length - 1) vpStartNextCountdown();
+    else $('#vp-ctl-play').textContent = '▶';
+  }
+  function vpStartNextCountdown() {
+    var box = $('#vp-player-next'), left = 5;
+    var nx = vpPlay.episodes[vpPlay.idx + 1] || {};
+    $('#vp-next-title').textContent = 'Episodio ' + (nx.n || (vpPlay.idx + 2)) + (nx.title ? ' — ' + nx.title : '');
+    box.hidden = false;
+    vpClearNext();
+    var tick = function () {
+      $('#vp-next-count').textContent = 'Siguiente episodio en ' + left + '…';
+      if (left <= 0) { vpClearNext(); vpOpenPlayer(vpPlay.a, vpPlay.idx + 1); return; }
+      left--;
+      vpPlay.nextTimer = setTimeout(tick, 1000);
+    };
+    tick();
+  }
+  function vpClearNext() {
+    if (vpPlay.nextTimer) { clearTimeout(vpPlay.nextTimer); vpPlay.nextTimer = null; }
+    var box = $('#vp-player-next');
+    if (box) box.hidden = true;
+  }
+
+  function vpUpdateTime() {
+    var vid = $('#vp-video');
+    if (!vid) return;
+    var t = vid.currentTime || 0;
+    var d = (vid.duration && isFinite(vid.duration)) ? vid.duration : 0;
+    $('#vp-time').textContent = vpFmtT(t) + ' / ' + vpFmtT(d);
+    var pct = d ? (t / d * 100) : 0;
+    $('#vp-seek-play').style.width = pct + '%';
+    $('#vp-seek-knob').style.left = pct + '%';
+    $('#vp-seek').setAttribute('aria-valuenow', Math.round(pct));
+  }
+  function vpUpdateBuffered() {
+    var vid = $('#vp-video');
+    try {
+      var b = vid.buffered, d = vid.duration;
+      if (b && b.length && d && isFinite(d) && d > 0) $('#vp-seek-buf').style.width = (b.end(b.length - 1) / d * 100) + '%';
+    } catch (e) {}
+  }
+
+  function vpWirePlayer() {
+    var vid = $('#vp-video');
+    if (!vid || vid.dataset.vpWired) return;
+    vid.dataset.vpWired = '1';
+    vid.addEventListener('loadedmetadata', function () {
+      vpUpdateTime(); vpUpdateBuffered();
+      if (vpPlay.resumeT > 0 && vid.duration && isFinite(vid.duration)) {
+        if (vpPlay.resumeT < vid.duration * 0.95) { try { vid.currentTime = vpPlay.resumeT; } catch (e) {} }
+        vpPlay.resumeT = 0;
+      }
+    });
+    vid.addEventListener('timeupdate', function () {
+      vpUpdateTime();
+      var now = Date.now();
+      if (now - vpPlay.lastSave > 5000) { vpPlay.lastSave = now; vpSaveProgress(); }
+    });
+    vid.addEventListener('progress', vpUpdateBuffered);
+    vid.addEventListener('play', function () { $('#vp-ctl-play').textContent = '❚❚'; $('#vp-player-spinner').hidden = true; });
+    vid.addEventListener('pause', function () { $('#vp-ctl-play').textContent = '▶'; vpSaveProgress(); });
+    vid.addEventListener('waiting', function () { $('#vp-player-spinner').hidden = false; });
+    vid.addEventListener('seeking', function () { $('#vp-player-spinner').hidden = false; });
+    vid.addEventListener('playing', function () { $('#vp-player-spinner').hidden = true; });
+    vid.addEventListener('canplay', function () { $('#vp-player-spinner').hidden = true; });
+    vid.addEventListener('ended', vpOnEnded);
+    vid.addEventListener('error', function () {
+      if (vpPlay.kind !== 'video') return;
+      $('#vp-player-spinner').hidden = true;
+      $('#vp-player-error').hidden = false;
+    });
+    var seek = $('#vp-player-controls') && $('#vp-seek'), dragging = false;
+    function seekTo(clientX) {
+      var r = seek.getBoundingClientRect();
+      if (!vid.duration || !isFinite(vid.duration) || r.width <= 0) return;
+      var ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      vid.currentTime = ratio * vid.duration;
+    }
+    seek.addEventListener('pointerdown', function (e) { dragging = true; try { seek.setPointerCapture(e.pointerId); } catch (x) {} seekTo(e.clientX); });
+    seek.addEventListener('pointermove', function (e) { if (dragging) seekTo(e.clientX); });
+    seek.addEventListener('pointerup', function () { dragging = false; });
+    seek.addEventListener('pointercancel', function () { dragging = false; });
+    seek.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
+      else if (e.key === 'ArrowLeft') vid.currentTime = Math.max(0, vid.currentTime - 10);
+    });
+    $$('#vp-player-controls [data-c]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var c = b.getAttribute('data-c');
+        if (c === 'play') { if (vid.paused) vid.play(); else vid.pause(); }
+        else if (c === 'rw') vid.currentTime = Math.max(0, vid.currentTime - 10);
+        else if (c === 'ff') vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
+        else if (c === 'mute') { vid.muted = !vid.muted; $('#vp-ctl-mute').textContent = vid.muted ? '🔇' : '🔊'; }
+        else if (c === 'speed') {
+          var steps = [1, 1.25, 1.5, 2];
+          var i = (steps.indexOf(vid.playbackRate) + 1) % steps.length;
+          vid.playbackRate = steps[i];
+          $('#vp-ctl-speed').textContent = steps[i] + 'x';
+        }
+        else if (c === 'fs') {
+          var p = $('#vp-player');
+          if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+          else if (p.requestFullscreen) { try { p.requestFullscreen(); } catch (e) {} }
+          else if (vid.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); } catch (e) {} }
+        }
+      });
+    });
+    $('#vp-vol').addEventListener('input', function (e) {
+      vid.volume = parseFloat(e.target.value);
+      vid.muted = vid.volume === 0;
+      $('#vp-ctl-mute').textContent = vid.muted ? '🔇' : '🔊';
+    });
+    $('#vp-player-back').addEventListener('click', vpClosePlayer);
+    $('#vp-player-nextbtn').addEventListener('click', function () { vpClearNext(); vpOpenPlayer(vpPlay.a, vpPlay.idx + 1); });
+    $('#vp-next-now').addEventListener('click', function () { vpClearNext(); vpOpenPlayer(vpPlay.a, vpPlay.idx + 1); });
+    $('#vp-next-cancel').addEventListener('click', vpClearNext);
+    $('#vp-player-retry').addEventListener('click', function () {
+      $('#vp-player-error').hidden = true;
+      vid.load();
+      var pr = vid.play();
+      if (pr && pr.catch) pr.catch(function () {});
+    });
+  }
+
+  /* ---------- Seguir viendo: riel en Inicio ---------- */
+  function vpContinueOpen(e) {
+    var a = (typeof vpFindAnime === 'function') ? vpFindAnime(e.title) : null;
+    if (!a) a = { title: e.title, imageUrl: e.image, type: e.movie ? 'Película' : '' };
+    vpOpenPlayer(a, e.movie ? null : e.epIdx, e.t);
+  }
+  function vpRenderContinue() {
+    var home = $('#vp-view-inicio'), hero = $('#vp-hero');
+    if (!home || !hero) return;
+    var wrap = $('#vp-continue-wrap');
+    var all = vpContGet();
+    var items = Object.keys(all).map(function (k) { return all[k]; })
+      .filter(function (e) { return e && e.d > 0 && (e.t / e.d) < 0.95; })
+      .sort(function (x, y) { return (y.updatedAt || 0) - (x.updatedAt || 0); });
+    if (!items.length) { if (wrap) wrap.remove(); return; }
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'carousel-container';
+      wrap.id = 'vp-continue-wrap';
+      hero.parentNode.insertBefore(wrap, hero.nextSibling);
+    }
+    var html = '<div class="carousel-title">Seguir viendo</div><div class="carousel vp-rail">';
+    items.forEach(function (e) {
+      var k = vpContKeyOf(e);
+      var pct = Math.max(0, Math.min(100, e.t / e.d * 100)).toFixed(1);
+      html += '<div class="vp-cont-card" data-k="' + esc(k) + '">' +
+        '<div class="vp-cont-thumb">' +
+        (e.image ? '<img src="' + esc(e.image) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+        '<button type="button" class="vp-cont-x" data-x="' + esc(k) + '" aria-label="Quitar">×</button>' +
+        '<div class="vp-cont-bar"><i style="width:' + pct + '%"></i></div></div>' +
+        '<div class="vp-cont-meta"><h3>' + esc(e.title || 'Sin título') + '</h3>' +
+        '<p>' + esc(e.epLabel || '') + ' · Faltan ' + esc(vpFmtT(e.d - e.t)) + '</p></div></div>';
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.vp-cont-card').forEach(function (card) {
+      card.addEventListener('click', function (ev) {
+        var xk = ev.target.getAttribute && ev.target.getAttribute('data-x');
+        if (xk) {
+          ev.stopPropagation();
+          var all2 = vpContGet();
+          delete all2[xk];
+          vpContSet(all2);
+          vpRenderContinue();
+          return;
+        }
+        var k = card.getAttribute('data-k');
+        var it = vpContGet()[k];
+        if (it) vpContinueOpen(it);
+      });
+    });
+  }
 
   /* ---------- vista Buscar ---------- */
   function vpRenderSearch() {
@@ -2812,10 +3246,8 @@
     }
     var clr = $('#vp-search-clear');
     if (clr) clr.addEventListener('click', function () { inp.value = ''; vpRenderSearch(); inp.focus(); });
-    var pb = $('#vp-player-back');
-    if (pb) pb.addEventListener('click', vpClosePlayer);
-    var po = $('#vp-player-blank');
-    if (po) po.addEventListener('click', function (e) { if (e.target === po) vpClosePlayer(); });
+    vpWirePlayer();
+    vpRenderContinue();
     vpInstallAddToList();
     vpFixSearchAnime();
     vpCheckReminders();
