@@ -563,6 +563,7 @@
 <body>
   <header>
     <div class="logo">VetPlex</div>
+    <button type="button" id="vp-acct-btn" aria-label="Mi cuenta" title="Mi cuenta">👤</button>
   </header>
 
   <!-- Héroe destacado: lo llena el algoritmo con el top 5 del catálogo -->
@@ -1443,6 +1444,55 @@
   #vp-search-clear:hover { background: rgba(255,255,255,0.22) !important; }
   .vp-search-hint { color: #9aa3b8; font-size: 13px; padding: 8px 18px 2px; }
 
+  /* ---------- Control segmentado (Buscar / Mi Cuenta) ---------- */
+  .vp-seg { display: flex; gap: 6px; padding: 10px 16px 2px; }
+  .vp-seg button {
+    flex: 1 1 0; padding: 8px 4px !important; margin: 0 !important;
+    border-radius: 999px !important; border: 1px solid rgba(255,255,255,0.14) !important;
+    background: rgba(255,255,255,0.06) !important; color: #9aa3b8 !important;
+    font-size: 13px !important; font-weight: 700 !important; cursor: pointer;
+    box-shadow: none !important; text-shadow: none !important;
+  }
+  .vp-seg button.on { background: var(--vp-accent) !important; border-color: transparent !important; color: #fff !important; }
+
+  /* ---------- Botón Mi Cuenta (header) ---------- */
+  #vp-acct-btn {
+    margin-left: auto !important; width: 38px !important; height: 38px !important; padding: 0 !important;
+    border-radius: 50% !important; border: 1px solid rgba(255,255,255,0.2) !important;
+    background: rgba(255,255,255,0.08) !important; color: #fff !important;
+    font-size: 16px !important; font-weight: 800 !important; cursor: pointer; flex: 0 0 auto !important;
+    display: inline-flex !important; align-items: center; justify-content: center;
+    box-shadow: none !important; text-shadow: none !important; line-height: 1;
+  }
+  #vp-acct-btn.has-user { background: var(--vp-accent) !important; border-color: transparent !important; }
+
+  /* ---------- Mi Cuenta ---------- */
+  .vp-acct-wrap { padding: 8px 16px 48px; max-width: 480px; margin: 0 auto; }
+  .vp-acct-wrap .vp-seg { padding: 10px 0 2px; }
+  .vp-acct-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; margin-top: 12px; }
+  .vp-acct-lbl { display: block; font-size: 13px; font-weight: 600; color: #9aa3b8; margin: 12px 0 0; }
+  .vp-acct-in {
+    width: 100% !important; margin-top: 6px !important; padding: 12px 14px !important;
+    border-radius: 12px !important; border: 1px solid rgba(255,255,255,0.16) !important;
+    background: rgba(255,255,255,0.07) !important; color: #fff !important; font-size: 15px !important;
+    box-shadow: none !important;
+  }
+  .vp-acct-in:focus { border-color: var(--vp-accent) !important; outline: none !important; }
+  .vp-acct-err { color: #ff8a8a; font-size: 13px; margin: 10px 0 0; }
+  .vp-acct-link {
+    background: none !important; border: none !important; color: var(--vp-accent) !important;
+    font-size: 14px !important; font-weight: 700 !important; padding: 12px 0 2px !important;
+    cursor: pointer; box-shadow: none !important; text-shadow: none !important; display: block; width: 100%;
+    text-align: center;
+  }
+  .vp-acct-user { display: flex; align-items: center; gap: 14px; }
+  .vp-acct-ava {
+    width: 64px; height: 64px; border-radius: 50%; background: var(--vp-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 800; color: #fff; flex: 0 0 auto;
+  }
+  .vp-acct-danger { border-color: rgba(255,110,110,0.55) !important; color: #ff9a9a !important; }
+
   /* ---------- Rejilla de resultados / Mi Lista ---------- */
   .vp-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
@@ -1723,10 +1773,6 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <span>Buscar</span>
   </button>
-  <button type="button" data-tab="personajes" aria-label="Personajes">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
-    <span>Personajes</span>
-  </button>
 </nav>
 
 <!-- Vista: Buscar -->
@@ -1734,8 +1780,13 @@
   <div class="vp-view-head"><h2>Buscar</h2></div>
   <div class="vp-searchbox">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    <input id="vp-search-input" type="search" placeholder="Anime, película..." autocomplete="off" enterkeyhint="search" aria-label="Buscar en VetPlex">
+    <input id="vp-search-input" type="search" placeholder="Anime, película, personaje..." autocomplete="off" enterkeyhint="search" aria-label="Buscar en VetPlex">
     <button type="button" id="vp-search-clear" aria-label="Limpiar búsqueda" hidden>×</button>
+  </div>
+  <div class="vp-seg" role="tablist" aria-label="Tipo de búsqueda">
+    <button type="button" class="on" data-smode="all">Todo</button>
+    <button type="button" data-smode="anime">Animes</button>
+    <button type="button" data-smode="char">Personajes</button>
   </div>
   <div id="vp-search-hint" class="vp-search-hint">Explora todo el catálogo</div>
   <div id="vp-search-results" class="vp-grid"></div>
@@ -1759,10 +1810,22 @@
   <div id="vp-cal-past"></div>
 </section>
 
-<!-- Vista: Personajes -->
+<!-- Vista: Personajes (pantalla completa; se abre como overlay, no es tab) -->
 <section id="vp-view-personajes" class="vp-view" aria-label="Personajes">
-  <div class="vp-view-head"><h2>Personajes</h2><p class="vp-view-sub">Sigue a tus personajes favoritos del anime</p></div>
+  <div class="vp-view-head vp-adm-head">
+    <button type="button" class="vp-back" onclick="vpGoBack()" aria-label="Volver">‹</button>
+    <div><h2>Personajes</h2><p class="vp-view-sub">Sigue a tus personajes favoritos del anime</p></div>
+  </div>
   <div id="vp-chars-grid" class="vp-char-grid"></div>
+</section>
+
+<!-- Vista: Mi Cuenta (no es tab; se abre desde el botón del header) -->
+<section id="vp-view-cuenta" class="vp-view" aria-label="Mi cuenta">
+  <div class="vp-view-head vp-adm-head">
+    <button type="button" class="vp-back" onclick="vpGoBack()" aria-label="Volver">‹</button>
+    <div><h2>Mi cuenta</h2><p class="vp-view-sub">Registro e inicio de sesión con Amazon</p></div>
+  </div>
+  <div id="vp-acct-body"></div>
 </section>
 
 <!-- Vista: Detalle del anime (estilo Disney+) -->
@@ -1983,6 +2046,10 @@
    Script clásico (no módulo): corre antes que los módulos y
    expone window.vpGo / window.vpOpenDetail para las tarjetas.
    ============================================================ */
+/* Configuración de Amazon Cognito para "Mi cuenta".
+   Pega aquí el User Pool ID y el App Client ID cuando se creen;
+   mientras sigan en __PENDIENTE__ la vista muestra un aviso amable. */
+window.VP_COGNITO = { region: 'us-east-2', userPoolId: '__PENDIENTE__', userPoolWebClientId: '__PENDIENTE__' };
 (function () {
   'use strict';
 
@@ -2108,7 +2175,7 @@
   }
 
   /* ---------- navegación ---------- */
-  var TABS = ['inicio', 'buscar', 'lista', 'calendario', 'personajes'];
+  var TABS = ['inicio', 'buscar', 'lista', 'calendario'];
   var vpCurrentTab = 'inicio';
   var vpBackStack = [];
   function vpGo(tab) {
@@ -2125,7 +2192,6 @@
     if (vpCurrentTab === 'lista') vpRenderLista();
     if (vpCurrentTab === 'calendario') { vpRenderCalendario(); vpCheckReminders(); }
     if (vpCurrentTab === 'inicio') vpRenderContinue();
-    if (vpCurrentTab === 'personajes') vpRenderPersonajes();
   }
   window.vpGo = vpGo;
 
@@ -2142,6 +2208,19 @@
   window.vpOpenDetail = vpOpenDetail;
   function vpGoBack() { vpGo(vpBackStack.pop() || 'inicio'); }
   window.vpGoBack = vpGoBack;
+
+  /* Personajes a pantalla completa: overlay (no es tab) */
+  function vpOpenPersonajes() {
+    if (vpCurrentTab === 'personajes-full') return;
+    vpBackStack.push(vpCurrentTab);
+    vpRenderPersonajes();
+    $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
+    var el = $('#vp-view-personajes');
+    if (el) el.classList.add('on');
+    vpCurrentTab = 'personajes-full';
+    window.scrollTo(0, 0);
+  }
+  window.vpOpenPersonajes = vpOpenPersonajes;
 
   /* ---------- tarjeta reutilizable ---------- */
   function vpCard(a) {
@@ -2556,25 +2635,97 @@
     });
   }
 
-  /* ---------- vista Buscar ---------- */
+  /* ---------- vista Buscar (animes + personajes) ---------- */
+  var vpSearchMode = 'all'; /* all | anime | char */
+  function vpSearchAnimes(q) {
+    var items = vpCatalog().filter(function (a) { return a && a.title && String(a.title).trim(); });
+    if (!q) return items;
+    return items.filter(function (a) {
+      return norm(a.title).indexOf(q) !== -1 || norm(a.synopsis).indexOf(q) !== -1 || norm(a.category).indexOf(q) !== -1;
+    });
+  }
+  function vpSearchChars(q) {
+    var list = (window.VP_CHARACTERS || []).slice();
+    if (q) {
+      list = list.filter(function (c) {
+        return norm(c.name).indexOf(q) !== -1 || norm(c.anime).indexOf(q) !== -1;
+      });
+    }
+    return list.sort(function (x, y) { return (y.followers || 0) - (x.followers || 0); });
+  }
+  function vpSetSearchMode(m) {
+    vpSearchMode = (m === 'anime' || m === 'char') ? m : 'all';
+    $$('#vp-view-buscar [data-smode]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-smode') === vpSearchMode);
+    });
+    vpRenderSearch();
+  }
+  window.vpSetSearchMode = vpSetSearchMode;
+  window.vpSearchChars = vpSearchChars;
+  window.vpSearchAnimes = vpSearchAnimes;
+
   function vpRenderSearch() {
     var inp = $('#vp-search-input');
     var q = norm(inp ? inp.value : '');
     var box = $('#vp-search-results');
     var hint = $('#vp-search-hint');
+    if (!box) return;
     box.innerHTML = '';
-    var items = vpCatalog().filter(function (a) { return a && a.title && String(a.title).trim(); });
-    var res = q ? items.filter(function (a) {
-      return norm(a.title).indexOf(q) !== -1 || norm(a.synopsis).indexOf(q) !== -1 || norm(a.category).indexOf(q) !== -1;
-    }) : items;
-    if (hint) {
-      hint.textContent = q
-        ? (res.length ? res.length + ' resultado(s)' : 'Sin resultados para "' + (inp.value || '') + '"')
-        : (items.length ? 'Todo el catálogo · ' + items.length + ' títulos' : 'El catálogo está vacío por ahora.');
-    }
-    res.forEach(function (a) { box.appendChild(vpCard(a)); });
     var clr = $('#vp-search-clear');
     if (clr) clr.hidden = !q;
+
+    /* Solo personajes */
+    if (vpSearchMode === 'char') {
+      var chars = vpSearchChars(q);
+      box.className = 'vp-char-grid';
+      box.innerHTML = chars.map(vpCharCardHTML).join('');
+      vpWireCharList(box, vpOpenCharSheet);
+      if (hint) hint.textContent = q
+        ? (chars.length ? chars.length + ' personaje(s)' : 'Sin personajes para "' + (inp.value || '') + '"')
+        : (chars.length + ' personajes · toca uno para ver su ficha');
+      return;
+    }
+
+    var res = vpSearchAnimes(q);
+    var ch2 = (vpSearchMode === 'all' && q) ? vpSearchChars(q) : [];
+
+    /* Todo: personajes + animes con etiquetas */
+    if (ch2.length || (vpSearchMode === 'all' && q && res.length)) {
+      box.className = '';
+      var parts = [];
+      if (ch2.length) parts.push(ch2.length + ' personaje(s)');
+      if (res.length) parts.push(res.length + ' título(s)');
+      if (hint) hint.textContent = parts.length ? parts.join(' · ') : 'Sin resultados para "' + (inp.value || '') + '"';
+      if (ch2.length) {
+        var lab = document.createElement('h3');
+        lab.className = 'vp-sec'; lab.style.margin = '6px 0 4px'; lab.textContent = 'Personajes';
+        box.appendChild(lab);
+        var cg = document.createElement('div');
+        cg.className = 'vp-char-grid'; cg.style.padding = '0 0 8px';
+        cg.innerHTML = ch2.map(vpCharCardHTML).join('');
+        box.appendChild(cg);
+        vpWireCharList(cg, vpOpenCharSheet);
+      }
+      if (res.length) {
+        if (ch2.length) {
+          var lab2 = document.createElement('h3');
+          lab2.className = 'vp-sec'; lab2.style.margin = '6px 0 4px'; lab2.textContent = 'Animes y películas';
+          box.appendChild(lab2);
+        }
+        var ag = document.createElement('div');
+        ag.className = 'vp-grid';
+        res.forEach(function (a) { ag.appendChild(vpCard(a)); });
+        box.appendChild(ag);
+      }
+      return;
+    }
+
+    /* Solo animes (igual que antes) */
+    box.className = 'vp-grid';
+    if (hint) hint.textContent = q
+      ? (res.length ? res.length + ' resultado(s)' : 'Sin resultados para "' + (inp.value || '') + '"')
+      : (res.length ? 'Todo el catálogo · ' + res.length + ' títulos' : 'El catálogo está vacío por ahora.');
+    res.forEach(function (a) { box.appendChild(vpCard(a)); });
   }
   window.vpRenderSearch = vpRenderSearch;
 
@@ -2795,6 +2946,17 @@
     $$('#vp-tabbar button').forEach(function (b) {
       b.addEventListener('click', function () { vpGo(b.getAttribute('data-tab')); });
     });
+    $$('#vp-view-buscar [data-smode]').forEach(function (b) {
+      if (b.dataset.vpWired) return;
+      b.dataset.vpWired = '1';
+      b.addEventListener('click', function () { vpSetSearchMode(b.getAttribute('data-smode')); });
+    });
+    var ab = $('#vp-acct-btn');
+    if (ab && !ab.dataset.vpWired) {
+      ab.dataset.vpWired = '1';
+      ab.addEventListener('click', function () { vpOpenCuenta(); });
+    }
+    vpAcctUpdateBtn();
     vpWireHeaderSearch();
     var inp = $('#vp-search-input');
     if (inp && !inp.dataset.vpWired) {
@@ -2958,25 +3120,26 @@
     var ref = $('#vp-continue-wrap');
     if (ref) ref.parentNode.insertBefore(wrap, ref.nextSibling);
     else hero.parentNode.insertBefore(wrap, hero.nextSibling);
-    $('#vp-chars-all').addEventListener('click', function () { vpGo('personajes'); });
+    $('#vp-chars-all').addEventListener('click', function () { vpOpenPersonajes(); });
     vpWireCharList(wrap, vpOpenCharSheet);
   }
+  /* Tarjeta de personaje reutilizable (vista completa + resultados de búsqueda) */
+  function vpCharCardHTML(c) {
+    var on = vpCharIsFollowing(c.id);
+    return '<article class="vp-char-card" data-char-open="' + esc(c.id) + '">' + vpCharAvatar(c, 'vp-ava-lg') +
+      '<h3>' + esc(c.name) + '</h3>' +
+      '<p class="vp-char-anime">' + esc(c.anime) + '</p>' +
+      '<p class="vp-char-count"><span data-char-count="' + esc(c.id) + '">' + esc(vpCharFmt(vpCharCount(c))) + '</span> seguidores</p>' +
+      '<button type="button" class="vp-char-btn' + (on ? ' on' : '') + '" data-char-follow="' + esc(c.id) + '">' +
+      (on ? '✓ Siguiendo' : 'Seguir') + '</button></article>';
+  }
+  window.vpCharCardHTML = vpCharCardHTML;
   /* Vista Personajes: rejilla ordenada por seguidores */
   function vpRenderPersonajes() {
     var grid = $('#vp-chars-grid');
     if (!grid) return;
     var list = VP_CHARACTERS.slice().sort(function (x, y) { return (y.followers || 0) - (x.followers || 0); });
-    var html = '';
-    list.forEach(function (c) {
-      var on = vpCharIsFollowing(c.id);
-      html += '<article class="vp-char-card" data-char-open="' + esc(c.id) + '">' + vpCharAvatar(c, 'vp-ava-lg') +
-        '<h3>' + esc(c.name) + '</h3>' +
-        '<p class="vp-char-anime">' + esc(c.anime) + '</p>' +
-        '<p class="vp-char-count"><span data-char-count="' + esc(c.id) + '">' + esc(vpCharFmt(vpCharCount(c))) + '</span> seguidores</p>' +
-        '<button type="button" class="vp-char-btn' + (on ? ' on' : '') + '" data-char-follow="' + esc(c.id) + '">' +
-        (on ? '✓ Siguiendo' : 'Seguir') + '</button></article>';
-    });
-    grid.innerHTML = html;
+    grid.innerHTML = list.map(vpCharCardHTML).join('');
     vpWireCharList(grid, vpOpenCharSheet);
   }
   /* Hoja de detalle del personaje */
@@ -3031,7 +3194,500 @@
     vpInit();
     setTimeout(function () { vpInstallAddToList(); vpFixSearchAnime(); }, 1500);
   }
+
+  /* ============================================================
+     MI CUENTA — registro e inicio de sesión con Amazon Cognito
+     Config: window.VP_COGNITO (definido al inicio de este script).
+     Mientras los IDs sigan en __PENDIENTE__, la vista muestra un
+     mensaje amable y nada se rompe. La librería
+     amazon-cognito-identity-js se carga de jsdelivr solo al abrir
+     la cuenta. La sesión persiste en localStorage (la app sigue
+     funcionando sin login; listas y progreso quedan locales).
+     ============================================================ */
+  var VP_COG_CDN = 'https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.12/dist/amazon-cognito-identity.min.js';
+  var VP_ACCT_KEY = 'vp_acct_user_v1';
+  var vpAcctUI = 'boot';      /* boot | gate | confirm | forgot | forgot2 | dash */
+  var vpAcctTab = 'signup';   /* signup | login */
+  var vpAcctPendingEmail = '';
+  var vpAcctPendingPass = '';
+  var vpAcctDelArmed = false;
+  var vpCogPromise = null;
+
+  function vpAcctConfigured() {
+    var c = window.VP_COGNITO || {};
+    return !!(c && c.userPoolId && c.userPoolWebClientId &&
+      String(c.userPoolId).indexOf('__PENDIENTE__') !== 0 &&
+      String(c.userPoolWebClientId).indexOf('__PENDIENTE__') !== 0);
+  }
+  function vpCognitoLib() { return window.AmazonCognitoIdentity || null; }
+  function vpEnsureCognito() {
+    var L = vpCognitoLib();
+    if (L) return Promise.resolve(L);
+    if (!vpCogPromise) {
+      vpCogPromise = new Promise(function (resolve, reject) {
+        try {
+          var s = document.createElement('script');
+          s.src = VP_COG_CDN; s.async = true;
+          s.onload = function () { resolve(vpCognitoLib()); };
+          s.onerror = function () { vpCogPromise = null; reject(new Error('cdn')); };
+          document.head.appendChild(s);
+          setTimeout(function () {
+            if (!vpCognitoLib()) { vpCogPromise = null; reject(new Error('timeout')); }
+          }, 25000);
+        } catch (e) { vpCogPromise = null; reject(e); }
+      });
+    }
+    return vpCogPromise;
+  }
+  function vpUserPool() {
+    var L = vpCognitoLib(), c = window.VP_COGNITO || {};
+    return new L.CognitoUserPool({ UserPoolId: c.userPoolId, ClientId: c.userPoolWebClientId });
+  }
+  function vpCogUser(email) {
+    var L = vpCognitoLib();
+    return new L.CognitoUser({ Username: norm(email), Pool: vpUserPool() });
+  }
+  function vpNeedLib(cb) {
+    var L = vpCognitoLib();
+    if (!L) { cb(new Error('El módulo de Amazon aún no se cargó. Reintenta en un momento.')); return null; }
+    return L;
+  }
+  function vpAcctErr(err) {
+    if (!err) return new Error('Ocurrió un error. Intenta de nuevo.');
+    var code = err.code || err.name || '';
+    var map = {
+      UsernameExistsException: 'Ese correo ya está registrado. Prueba entrar.',
+      NotAuthorizedException: 'Correo o contraseña incorrectos.',
+      UserNotFoundException: 'No hay una cuenta con ese correo.',
+      UserNotConfirmedException: 'Confirma tu cuenta con el código que te enviamos al correo.',
+      CodeMismatchException: 'El código no es correcto. Revísalo e intenta de nuevo.',
+      ExpiredCodeException: 'El código venció. Pide uno nuevo.',
+      InvalidPasswordException: 'La contraseña debe tener mínimo 8 caracteres.',
+      InvalidParameterException: 'Revisa los datos ingresados e intenta de nuevo.',
+      LimitExceededException: 'Demasiados intentos. Espera un momento e intenta de nuevo.',
+      TooManyRequestsException: 'Demasiados intentos. Espera un momento e intenta de nuevo.'
+    };
+    var m = new Error(map[code] || err.message || 'Ocurrió un error. Intenta de nuevo.');
+    m.code = code;
+    return m;
+  }
+
+  function vpAcctSignUp(name, email, password, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    email = norm(email);
+    var attrs = [new L.CognitoUserAttribute({ Name: 'name', Value: String(name || '').trim() || email })];
+    try {
+      vpUserPool().signUp(email, password, attrs, null, function (err, res) {
+        if (err) { cb(vpAcctErr(err)); return; }
+        cb(null, { email: email, userConfirmed: !!(res && res.userConfirmed) });
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctConfirm(email, code, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    try {
+      vpCogUser(email).confirmRegistration(String(code).trim(), true, function (err, res) {
+        if (err) { cb(vpAcctErr(err)); return; }
+        cb(null, res);
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctResendCode(email, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    try {
+      vpCogUser(email).resendConfirmationCode(function (err, res) {
+        if (err) { cb(vpAcctErr(err)); return; }
+        cb(null, res);
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctLogin(email, password, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    email = norm(email);
+    var user = vpCogUser(email);
+    var det = new L.AuthenticationDetails({ Username: email, Password: password });
+    try {
+      user.authenticateUser(det, {
+        onSuccess: function () { vpAcctCacheFromUser(user, cb); },
+        onFailure: function (err) { cb(vpAcctErr(err)); }
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctCacheFromUser(user, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    try {
+      user.getUserAttributes(function (err, attrs) {
+        var name = '', email = '';
+        try { email = user.getUsername() || ''; } catch (e) {}
+        (attrs || []).forEach(function (a) {
+          var n = '', v = '';
+          try { n = a.getName(); v = a.getValue(); } catch (e) {}
+          if (n === 'name') name = v;
+          if (n === 'email' && !email) email = v;
+        });
+        var u = { name: name || (email ? email.split('@')[0] : 'Usuario'), email: email };
+        store.set(VP_ACCT_KEY, u);
+        vpAcctUpdateBtn();
+        cb(null, u);
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctLogout() {
+    var L = vpCognitoLib();
+    if (L && vpAcctConfigured()) {
+      try { var u = vpUserPool().getCurrentUser(); if (u) u.signOut(); } catch (e) {}
+    }
+    try { localStorage.removeItem(VP_ACCT_KEY); } catch (e) {}
+    vpAcctPendingPass = '';
+    vpAcctDelArmed = false;
+    vpAcctUpdateBtn();
+    vpAcctUI = 'gate';
+    vpAcctRender();
+    toast('Sesión cerrada');
+  }
+  function vpAcctDelete(cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    var u = null;
+    try { u = vpUserPool().getCurrentUser(); } catch (e) { u = null; }
+    if (!u) { cb(new Error('No hay sesión activa.')); return; }
+    try {
+      u.deleteUser(function (err, res) {
+        if (err) { cb(vpAcctErr(err)); return; }
+        try { localStorage.removeItem(VP_ACCT_KEY); } catch (e) {}
+        vpAcctPendingPass = '';
+        vpAcctUpdateBtn();
+        cb(null, res);
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctForgot(email, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    try {
+      vpCogUser(email).forgotPassword({
+        onSuccess: function () { cb(null); },
+        onFailure: function (err) { cb(vpAcctErr(err)); },
+        inputVerificationCode: function () {}
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctForgotConfirm(email, code, newPass, cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    if (!vpAcctConfigured()) { cb(new Error('El registro aún no está activado.')); return; }
+    var L = vpNeedLib(cb); if (!L) return;
+    try {
+      vpCogUser(email).confirmPassword(String(code).trim(), newPass, {
+        onSuccess: function () { cb(null); },
+        onFailure: function (err) { cb(vpAcctErr(err)); }
+      });
+    } catch (e) { cb(e); }
+  }
+  function vpAcctSession() {
+    if (!vpAcctConfigured()) return null;
+    var L = vpCognitoLib(); if (!L) return null;
+    try {
+      var u = vpUserPool().getCurrentUser();
+      if (!u) return null;
+      var c = store.get(VP_ACCT_KEY, null) || {};
+      return { email: u.getUsername(), name: c.name || '' };
+    } catch (e) { return null; }
+  }
+  function vpAcctBootSession(cb) {
+    cb = (typeof cb === 'function') ? cb : function () {};
+    var u = null;
+    try { u = vpUserPool().getCurrentUser(); } catch (e) { u = null; }
+    if (!u) { cb(null); return; }
+    try {
+      u.getSession(function (err, session) {
+        if (err || !session || !session.isValid()) { cb(null); return; }
+        vpAcctCacheFromUser(u, function (e2, cached) { cb(cached || null); });
+      });
+    } catch (e) { cb(null); }
+  }
+
+  /* ----- interfaz de Mi Cuenta ----- */
+  function vpAcctPendingHTML() {
+    return '<div class="vp-acct-wrap"><div class="vp-acct-box" style="text-align:center">' +
+      '<div style="font-size:44px;margin:6px 0">🔒</div>' +
+      '<h3 class="vp-sec" style="margin:0 0 6px">Mi cuenta</h3>' +
+      '<p class="vp-note" style="margin-top:6px">El registro de usuarios con Amazon se activará en breve.<br>' +
+      'VetPlex funciona perfectamente sin cuenta: tu lista, tu progreso y tus personajes se guardan en este dispositivo.</p>' +
+      '</div></div>';
+  }
+  function vpAcctGateHTML() {
+    var s = vpAcctTab === 'signup';
+    var h = '<div class="vp-acct-wrap">';
+    h += '<div class="vp-seg" role="tablist" aria-label="Modo de cuenta">';
+    h += '<button type="button" class="' + (s ? 'on' : '') + '" data-atab="signup">Crear cuenta</button>';
+    h += '<button type="button" class="' + (s ? '' : 'on') + '" data-atab="login">Entrar</button></div>';
+    if (s) {
+      h += '<div class="vp-acct-box">' +
+        '<h3 class="vp-sec" style="margin:0 0 4px">Crear cuenta</h3>' +
+        '<p class="vp-note" style="margin-top:2px">Tu cuenta se guarda de forma segura en Amazon.</p>' +
+        '<label class="vp-acct-lbl">Nombre<input id="vp-ac-su-name" class="vp-acct-in" type="text" autocomplete="name" placeholder="Tu nombre"></label>' +
+        '<label class="vp-acct-lbl">Correo<input id="vp-ac-su-email" class="vp-acct-in" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com"></label>' +
+        '<label class="vp-acct-lbl">Contraseña<input id="vp-ac-su-pass" class="vp-acct-in" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>' +
+        '<p class="vp-acct-err" id="vp-ac-err" hidden></p>' +
+        '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-su-go" style="margin-top:14px;width:100%">Crear cuenta</button>' +
+        '</div>';
+    } else {
+      h += '<div class="vp-acct-box">' +
+        '<h3 class="vp-sec" style="margin:0 0 4px">Entrar</h3>' +
+        '<label class="vp-acct-lbl">Correo<input id="vp-ac-li-email" class="vp-acct-in" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com"></label>' +
+        '<label class="vp-acct-lbl">Contraseña<input id="vp-ac-li-pass" class="vp-acct-in" type="password" autocomplete="current-password" placeholder="Tu contraseña"></label>' +
+        '<p class="vp-acct-err" id="vp-ac-err" hidden></p>' +
+        '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-li-go" style="margin-top:14px;width:100%">Entrar</button>' +
+        '<button type="button" class="vp-acct-link" id="vp-ac-forgot">Olvidé mi contraseña</button>' +
+        '</div>';
+    }
+    return h + '</div>';
+  }
+  function vpAcctConfirmHTML() {
+    return '<div class="vp-acct-wrap"><div class="vp-acct-box">' +
+      '<h3 class="vp-sec" style="margin:0 0 4px">Confirma tu correo</h3>' +
+      '<p class="vp-note" style="margin-top:2px">Te enviamos un código de 6 dígitos a <b>' + esc(vpAcctPendingEmail) + '</b>.</p>' +
+      '<label class="vp-acct-lbl">Código<input id="vp-ac-cf-code" class="vp-acct-in" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"></label>' +
+      '<p class="vp-acct-err" id="vp-ac-err" hidden></p>' +
+      '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-cf-go" style="margin-top:14px;width:100%">Confirmar</button>' +
+      '<button type="button" class="vp-acct-link" id="vp-ac-cf-resend">Reenviar código</button>' +
+      '</div></div>';
+  }
+  function vpAcctForgotHTML() {
+    return '<div class="vp-acct-wrap"><div class="vp-acct-box">' +
+      '<h3 class="vp-sec" style="margin:0 0 4px">Recuperar contraseña</h3>' +
+      '<p class="vp-note" style="margin-top:2px">Te enviaremos un código a tu correo.</p>' +
+      '<label class="vp-acct-lbl">Correo<input id="vp-ac-fg-email" class="vp-acct-in" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com"></label>' +
+      '<p class="vp-acct-err" id="vp-ac-err" hidden></p>' +
+      '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-fg-go" style="margin-top:14px;width:100%">Enviar código</button>' +
+      '<button type="button" class="vp-acct-link" id="vp-ac-fg-back">Volver a entrar</button>' +
+      '</div></div>';
+  }
+  function vpAcctForgot2HTML() {
+    return '<div class="vp-acct-wrap"><div class="vp-acct-box">' +
+      '<h3 class="vp-sec" style="margin:0 0 4px">Nueva contraseña</h3>' +
+      '<p class="vp-note" style="margin-top:2px">Escribe el código que te enviamos a <b>' + esc(vpAcctPendingEmail) + '</b>.</p>' +
+      '<label class="vp-acct-lbl">Código<input id="vp-ac-f2-code" class="vp-acct-in" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"></label>' +
+      '<label class="vp-acct-lbl">Nueva contraseña<input id="vp-ac-f2-pass" class="vp-acct-in" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>' +
+      '<p class="vp-acct-err" id="vp-ac-err" hidden></p>' +
+      '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-f2-go" style="margin-top:14px;width:100%">Cambiar contraseña</button>' +
+      '</div></div>';
+  }
+  function vpAcctDashHTML() {
+    var u = store.get(VP_ACCT_KEY, null) || {};
+    var initial = esc(String((u.name || u.email || '?').charAt(0)).toUpperCase());
+    var h = '<div class="vp-acct-wrap"><div class="vp-acct-box">';
+    h += '<div class="vp-acct-user"><div class="vp-acct-ava">' + initial + '</div>';
+    h += '<div><h3 class="vp-sec" style="margin:0">' + esc(u.name || 'Mi cuenta') + '</h3>';
+    h += '<p class="vp-note" style="margin:4px 0 0">' + esc(u.email || '') + '</p></div></div>';
+    h += '<p class="vp-acct-err" id="vp-ac-err" hidden></p>';
+    h += '<button type="button" class="vp-btn vp-btn-ghost" id="vp-ac-logout" style="margin-top:14px;width:100%">Cerrar sesión</button>';
+    h += '<button type="button" class="vp-btn vp-btn-ghost vp-acct-danger" id="vp-ac-del" style="margin-top:10px;width:100%">Eliminar mi cuenta</button>';
+    h += '<p class="vp-note" id="vp-ac-del-note" style="margin-top:10px" hidden>Esta acción borra tu cuenta de VetPlex para siempre. Toca de nuevo «Eliminar mi cuenta» para confirmar.</p>';
+    h += '</div></div>';
+    return h;
+  }
+  function vpAcctShowErr(msg) {
+    var e = $('#vp-ac-err');
+    if (!e) return;
+    if (!msg) { e.hidden = true; e.textContent = ''; return; }
+    e.hidden = false; e.textContent = msg;
+  }
+  function vpAcctWireGate(root) {
+    root.querySelectorAll('[data-atab]').forEach(function (b) {
+      b.addEventListener('click', function () { vpAcctTab = b.getAttribute('data-atab'); vpAcctUI = 'gate'; vpAcctRender(); });
+    });
+    var su = $('#vp-ac-su-go');
+    if (su) su.addEventListener('click', function () {
+      var name = $('#vp-ac-su-name').value, email = $('#vp-ac-su-email').value, pass = $('#vp-ac-su-pass').value;
+      vpAcctShowErr('');
+      if (!String(name).trim()) { vpAcctShowErr('Escribe tu nombre.'); return; }
+      if (!/.+@.+\..+/.test(String(email).trim())) { vpAcctShowErr('Escribe un correo válido.'); return; }
+      if (String(pass).length < 8) { vpAcctShowErr('La contraseña debe tener mínimo 8 caracteres.'); return; }
+      su.disabled = true; su.textContent = 'Creando…';
+      vpAcctSignUp(name, email, pass, function (err, res) {
+        su.disabled = false; su.textContent = 'Crear cuenta';
+        if (err) { vpAcctShowErr(err.message); return; }
+        vpAcctPendingEmail = norm(email); vpAcctPendingPass = pass;
+        if (res && res.userConfirmed) {
+          vpAcctLogin(vpAcctPendingEmail, vpAcctPendingPass, function (e2, u) {
+            if (e2) { vpAcctShowErr(e2.message); return; }
+            vpAcctPendingPass = ''; vpAcctUI = 'dash'; vpAcctRender();
+            toast('¡Bienvenido a VetPlex, ' + u.name + '!');
+          });
+        } else {
+          vpAcctUI = 'confirm'; vpAcctRender();
+          toast('Te enviamos un código a tu correo');
+        }
+      });
+    });
+    var li = $('#vp-ac-li-go');
+    if (li) li.addEventListener('click', function () {
+      var email = $('#vp-ac-li-email').value, pass = $('#vp-ac-li-pass').value;
+      vpAcctShowErr('');
+      li.disabled = true; li.textContent = 'Entrando…';
+      vpAcctLogin(email, pass, function (err, u) {
+        li.disabled = false; li.textContent = 'Entrar';
+        if (err) {
+          if (err.code === 'UserNotConfirmedException') {
+            vpAcctPendingEmail = norm(email); vpAcctPendingPass = pass;
+            vpAcctUI = 'confirm'; vpAcctRender();
+          } else vpAcctShowErr(err.message);
+          return;
+        }
+        vpAcctUI = 'dash'; vpAcctRender();
+        toast('¡Hola de nuevo, ' + u.name + '!');
+      });
+    });
+    var fg = $('#vp-ac-forgot');
+    if (fg) fg.addEventListener('click', function () { vpAcctUI = 'forgot'; vpAcctRender(); });
+  }
+  function vpAcctWireConfirm(root) {
+    var go = $('#vp-ac-cf-go');
+    if (go) go.addEventListener('click', function () {
+      var code = $('#vp-ac-cf-code').value;
+      vpAcctShowErr('');
+      if (String(code).trim().length < 4) { vpAcctShowErr('Escribe el código que te enviamos.'); return; }
+      go.disabled = true; go.textContent = 'Confirmando…';
+      vpAcctConfirm(vpAcctPendingEmail, code, function (err) {
+        if (err) { go.disabled = false; go.textContent = 'Confirmar'; vpAcctShowErr(err.message); return; }
+        vpAcctLogin(vpAcctPendingEmail, vpAcctPendingPass, function (e2, u) {
+          if (e2) { go.disabled = false; go.textContent = 'Confirmar'; vpAcctShowErr(e2.message); return; }
+          vpAcctPendingPass = ''; vpAcctUI = 'dash'; vpAcctRender();
+          toast('¡Cuenta confirmada! Bienvenido, ' + u.name);
+        });
+      });
+    });
+    var rs = $('#vp-ac-cf-resend');
+    if (rs) rs.addEventListener('click', function () {
+      vpAcctResendCode(vpAcctPendingEmail, function (err) {
+        toast(err ? err.message : 'Código reenviado a tu correo');
+      });
+    });
+  }
+  function vpAcctWireForgot(root) {
+    var go = $('#vp-ac-fg-go');
+    if (go) go.addEventListener('click', function () {
+      var email = $('#vp-ac-fg-email').value;
+      vpAcctShowErr('');
+      if (!/.+@.+\..+/.test(String(email).trim())) { vpAcctShowErr('Escribe un correo válido.'); return; }
+      go.disabled = true; go.textContent = 'Enviando…';
+      vpAcctForgot(email, function (err) {
+        go.disabled = false; go.textContent = 'Enviar código';
+        if (err) { vpAcctShowErr(err.message); return; }
+        vpAcctPendingEmail = norm(email);
+        vpAcctUI = 'forgot2'; vpAcctRender();
+        toast('Código enviado a tu correo');
+      });
+    });
+    var bk = $('#vp-ac-fg-back');
+    if (bk) bk.addEventListener('click', function () { vpAcctTab = 'login'; vpAcctUI = 'gate'; vpAcctRender(); });
+  }
+  function vpAcctWireForgot2(root) {
+    var go = $('#vp-ac-f2-go');
+    if (go) go.addEventListener('click', function () {
+      var code = $('#vp-ac-f2-code').value, pass = $('#vp-ac-f2-pass').value;
+      vpAcctShowErr('');
+      if (String(pass).length < 8) { vpAcctShowErr('La contraseña debe tener mínimo 8 caracteres.'); return; }
+      go.disabled = true; go.textContent = 'Cambiando…';
+      vpAcctForgotConfirm(vpAcctPendingEmail, code, pass, function (err) {
+        go.disabled = false; go.textContent = 'Cambiar contraseña';
+        if (err) { vpAcctShowErr(err.message); return; }
+        vpAcctTab = 'login'; vpAcctUI = 'gate'; vpAcctRender();
+        toast('Contraseña actualizada. Entra con tu nueva contraseña.');
+      });
+    });
+  }
+  function vpAcctWireDash(root) {
+    var lo = $('#vp-ac-logout');
+    if (lo) lo.addEventListener('click', function () { vpAcctLogout(); });
+    var del = $('#vp-ac-del');
+    if (del) del.addEventListener('click', function () {
+      if (!vpAcctDelArmed) {
+        vpAcctDelArmed = true;
+        var n = $('#vp-ac-del-note'); if (n) n.hidden = false;
+        del.textContent = 'Sí, eliminar mi cuenta para siempre';
+        return;
+      }
+      del.disabled = true; del.textContent = 'Eliminando…';
+      vpAcctDelete(function (err) {
+        if (err) {
+          del.disabled = false; del.textContent = 'Eliminar mi cuenta';
+          vpAcctDelArmed = false; vpAcctShowErr(err.message); return;
+        }
+        vpAcctDelArmed = false; vpAcctUI = 'gate'; vpAcctRender();
+        toast('Tu cuenta fue eliminada');
+      });
+    });
+  }
+  function vpAcctRender() {
+    var body = $('#vp-acct-body');
+    if (!body) return;
+    if (!vpAcctConfigured()) { vpAcctUI = 'pending'; body.innerHTML = vpAcctPendingHTML(); return; }
+    if (vpAcctUI === 'dash') { body.innerHTML = vpAcctDashHTML(); vpAcctWireDash(body); return; }
+    if (vpAcctUI === 'confirm') { body.innerHTML = vpAcctConfirmHTML(); vpAcctWireConfirm(body); return; }
+    if (vpAcctUI === 'forgot') { body.innerHTML = vpAcctForgotHTML(); vpAcctWireForgot(body); return; }
+    if (vpAcctUI === 'forgot2') { body.innerHTML = vpAcctForgot2HTML(); vpAcctWireForgot2(body); return; }
+    if (vpAcctUI === 'gate') { body.innerHTML = vpAcctGateHTML(); vpAcctWireGate(body); return; }
+    body.innerHTML = '<div class="vp-acct-wrap"><p class="vp-note">Cargando tu cuenta…</p></div>';
+    vpEnsureCognito().then(function () {
+      vpAcctBootSession(function (u) {
+        vpAcctUI = u ? 'dash' : 'gate';
+        vpAcctRender();
+      });
+    }).catch(function () {
+      body.innerHTML = '<div class="vp-acct-wrap"><div class="vp-acct-box" style="text-align:center">' +
+        '<p class="vp-acct-err">No se pudo conectar con Amazon. Revisa tu conexión.</p>' +
+        '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-retry" style="margin-top:12px">Reintentar</button></div></div>';
+      var r = $('#vp-ac-retry');
+      if (r) r.addEventListener('click', function () { vpAcctUI = 'boot'; vpAcctRender(); });
+    });
+  }
+  function vpAcctUpdateBtn() {
+    var b = $('#vp-acct-btn');
+    if (!b) return;
+    var u = store.get(VP_ACCT_KEY, null);
+    var has = !!(u && (u.name || u.email));
+    b.classList.toggle('has-user', has);
+    b.textContent = has ? String(u.name || u.email).charAt(0).toUpperCase() : '👤';
+    b.setAttribute('aria-label', has ? ('Mi cuenta · ' + (u.name || u.email)) : 'Mi cuenta');
+  }
+  function vpOpenCuenta() {
+    if (vpCurrentTab === 'cuenta') return;
+    document.body.classList.add('vp-no-header');
+    vpBackStack.push(vpCurrentTab);
+    $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
+    var el = $('#vp-view-cuenta');
+    if (el) el.classList.add('on');
+    vpCurrentTab = 'cuenta';
+    vpAcctUI = 'boot';
+    vpAcctRender();
+    window.scrollTo(0, 0);
+  }
+  window.vpOpenCuenta = vpOpenCuenta;
+  window.vpAcctConfigured = vpAcctConfigured;
+  window.vpAcctSession = vpAcctSession;
+  window.vpAcctSignUp = vpAcctSignUp;
+  window.vpAcctConfirm = vpAcctConfirm;
+  window.vpAcctResendCode = vpAcctResendCode;
+  window.vpAcctLogin = vpAcctLogin;
+  window.vpAcctLogout = vpAcctLogout;
+  window.vpAcctDelete = vpAcctDelete;
+  window.vpAcctForgot = vpAcctForgot;
+  window.vpAcctForgotConfirm = vpAcctForgotConfirm;
+  window.vpAcctPendingHTML = vpAcctPendingHTML;
 })();
+
 </script>
 
 
