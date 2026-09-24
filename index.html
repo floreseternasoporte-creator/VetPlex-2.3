@@ -1208,7 +1208,8 @@
       p.textContent = anime.year || '';
       card.append(img, h3, p);
       card.addEventListener('click', () => {
-        if (window.showModal) window.showModal(anime.title, anime.synopsis, anime.year);
+        if (window.vpOpenDetail) window.vpOpenDetail(anime);
+        else if (window.showModal) window.showModal(anime.title, anime.synopsis, anime.year);
       });
       return card;
     }
@@ -1299,6 +1300,7 @@
       }
     }
     function renderAnimeList(animes) {
+      window.__vpAnimes = Array.isArray(animes) ? animes : [];
       if (catalogo) catalogo.innerHTML = '';
       let catalogCount = 0;
       animes.forEach((anime) => {
@@ -1384,7 +1386,8 @@
         det.dataset.wired = '1';
         det.addEventListener('click', () => {
           const a = vpHeroList[vpHeroIdx];
-          if (a && window.showModal) window.showModal(a.title, a.synopsis || '', a.year || '');
+          if (a && window.vpOpenDetail) window.vpOpenDetail(a);
+          else if (a && window.showModal) window.showModal(a.title, a.synopsis || '', a.year || '');
         });
       }
       const add = document.getElementById('vp-hero-add');
@@ -2064,6 +2067,803 @@
     #overlay { --ax-accent: #00a8e1; --ax-accent-hi: #38c6f4; --ax-accent-deep: #0063e5; }
     #switch-auth { color: var(--vp-accent) !important; }
   </style>
+<!-- ============================================================
+     VetPlex App — navegación inferior + vistas (2026-09-24)
+     Secciones: Inicio · Mi Lista · Calendario · Buscar + Detalle
+     estilo Disney+/Netflix. Sin cambios a Firebase ni al tema.
+     ============================================================ -->
+<style id="vp-app-tabs">
+  /* La barra inferior no debe tapar contenido ni el atajo flotante */
+  body { padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+  #shortcut { bottom: calc(108px + env(safe-area-inset-bottom)) !important; }
+
+  /* ---------- Barra de pestañas ---------- */
+  #vp-tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 640;
+    display: flex; align-items: stretch;
+    background: rgba(6, 9, 19, 0.94);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+  }
+  #vp-tabbar button {
+    flex: 1 1 0; width: auto !important; margin: 0 !important;
+    padding: 6px 2px !important;
+    background: none !important; background-color: transparent !important;
+    border: none !important; border-radius: 10px !important;
+    box-shadow: none !important; text-shadow: none !important;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: #8b93a8; font-size: 11px !important; font-weight: 600; line-height: 1.2;
+    cursor: pointer;
+  }
+  #vp-tabbar button:hover { background: none !important; background-color: transparent !important; }
+  #vp-tabbar button:active { transform: scale(0.94); }
+  #vp-tabbar button.on { color: #00a8e1; }
+  #vp-tabbar button svg { width: 24px; height: 24px; display: block; }
+
+  /* ---------- Vistas ---------- */
+  .vp-view { display: none; }
+  .vp-view.on { display: block; animation: vpViewIn 0.22s ease; }
+  @keyframes vpViewIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .vp-view-head { padding: 20px 16px 4px; }
+  .vp-view-head h2 { margin: 0; font-size: 25px; font-weight: 800; color: #fff; }
+  .vp-view-sub { color: #9aa3b8; font-size: 13px; margin: 5px 0 0; }
+  .vp-sec { font-size: 17px; font-weight: 700; color: #fff; margin: 22px 16px 10px; }
+
+  /* ---------- Buscar ---------- */
+  .vp-searchbox {
+    display: flex; align-items: center; gap: 8px;
+    margin: 10px 16px 4px; padding: 5px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px;
+  }
+  .vp-searchbox:focus-within { border-color: #00a8e1; background: rgba(255, 255, 255, 0.11); }
+  .vp-searchbox svg { flex: 0 0 auto; color: #9aa3b8; }
+  #vp-search-input {
+    flex: 1 1 auto; min-width: 0; width: auto !important;
+    background: transparent !important; border: none !important; outline: none !important;
+    box-shadow: none !important; border-radius: 0 !important;
+    color: #fff !important; font-size: 15px !important;
+    padding: 9px 0 !important; margin: 0 !important; display: block;
+  }
+  #vp-search-input::placeholder { color: #9aa3b8; }
+  #vp-search-clear {
+    flex: 0 0 auto; width: 26px !important; height: 26px; padding: 0 !important; margin: 0 !important;
+    border: none !important; border-radius: 50% !important; background: rgba(255,255,255,0.14) !important;
+    color: #fff; font-size: 15px !important; line-height: 1; cursor: pointer; box-shadow: none !important;
+  }
+  #vp-search-clear:hover { background: rgba(255,255,255,0.22) !important; }
+  .vp-search-hint { color: #9aa3b8; font-size: 13px; padding: 8px 18px 2px; }
+
+  /* ---------- Rejilla de resultados / Mi Lista ---------- */
+  .vp-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 16px 10px; padding: 8px 16px 26px;
+  }
+  .vp-grid .vp-card { width: auto; flex: none; }
+  .vp-grid .vp-card img { width: 100%; }
+  .vp-cardwrap { position: relative; }
+  .vp-card-x {
+    position: absolute; top: 4px; right: 4px;
+    width: 28px !important; height: 28px; padding: 0 !important; margin: 0 !important;
+    border: none !important; border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.72) !important; color: #fff;
+    font-size: 17px !important; line-height: 1; cursor: pointer; box-shadow: none !important;
+  }
+  .vp-card-x:hover { background: rgba(0, 0, 0, 0.9) !important; }
+
+  /* ---------- Detalle estilo Disney+ ---------- */
+  #vp-view-detalle { padding-bottom: 20px; }
+  .vp-det-backdrop {
+    height: 250px; background-size: cover; background-position: center 20%;
+    background-color: #0a0e1c; position: relative;
+  }
+  .vp-det-backdrop::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(6,9,19,0.15) 0%, rgba(6,9,19,0.55) 55%, #060913 96%);
+  }
+  .vp-det-body { padding: 0 16px 10px; margin-top: -84px; position: relative; }
+  .vp-back {
+    width: 38px !important; height: 38px; padding: 0 !important; margin: 0 0 10px !important;
+    border: none !important; border-radius: 50% !important;
+    background: rgba(10, 14, 28, 0.72) !important; color: #fff;
+    font-size: 24px !important; line-height: 1; cursor: pointer; box-shadow: none !important;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .vp-back:hover { background: rgba(10, 14, 28, 0.9) !important; }
+  .vp-det-top { display: flex; gap: 14px; align-items: flex-end; }
+  .vp-det-poster {
+    width: 112px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+    background: #141a30;
+  }
+  .vp-det-info { min-width: 0; padding-bottom: 2px; }
+  .vp-det-info h2 { font-size: 23px; font-weight: 800; margin: 0 0 6px; color: #fff; line-height: 1.15; }
+  .vp-det-meta { font-size: 13px; font-weight: 600; color: #cdd6ea; }
+  .vp-badge {
+    display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 1.2px;
+    padding: 5px 11px; border-radius: 6px; margin-top: 9px; text-transform: uppercase;
+  }
+  .vp-badge-movie { background: linear-gradient(135deg, #00a8e1, #0063e5); color: #fff; }
+  .vp-badge-serie { background: rgba(255, 255, 255, 0.13); color: #fff; border: 1px solid rgba(255, 255, 255, 0.28); }
+  .vp-det-syn { color: #c4cddd; font-size: 14px; line-height: 1.6; margin: 14px 0 0; }
+  .vp-det-actions { display: flex; gap: 10px; margin: 16px 0 4px; }
+  .vp-btn {
+    flex: 1 1 0; width: auto !important; margin: 0 !important;
+    padding: 13px 10px !important; border-radius: 10px !important;
+    font-size: 15px !important; font-weight: 700; cursor: pointer;
+    border: none !important; box-shadow: none !important; text-shadow: none !important;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .vp-btn-primary { background: linear-gradient(135deg, #00a8e1, #0063e5) !important; color: #fff !important; }
+  .vp-btn-ghost { background: rgba(255, 255, 255, 0.13) !important; color: #fff !important; border: 1px solid rgba(255,255,255,0.22) !important; }
+  .vp-btn:hover { filter: brightness(1.08); background-color: inherit !important; }
+  .vp-btn:active { transform: scale(0.97); }
+  .vp-ep {
+    display: flex; align-items: center; gap: 12px;
+    width: 100% !important; margin: 0 0 8px !important; padding: 11px 12px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important; border-radius: 10px !important;
+    color: #fff; font-size: 14px !important; font-weight: 600; text-align: left;
+    cursor: pointer; box-shadow: none !important; text-shadow: none !important;
+  }
+  .vp-ep:hover { background: rgba(255, 255, 255, 0.11) !important; background-color: rgba(255,255,255,0.11) !important; }
+  .vp-ep-n {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0, 168, 225, 0.16); color: #00a8e1;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px;
+  }
+  .vp-ep-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vp-ep-play { color: #00a8e1; font-size: 13px; flex: 0 0 auto; }
+  .vp-note { color: #9aa3b8; font-size: 12.5px; margin: 12px 2px 0; }
+
+  /* ---------- Calendario ---------- */
+  #vp-cal-reminder-banner {
+    margin: 10px 16px 4px; padding: 11px 14px; font-size: 13px; color: #d7ecff;
+    background: rgba(0, 168, 225, 0.12); border: 1px solid rgba(0, 168, 225, 0.42);
+    border-radius: 12px;
+  }
+  #vp-cal-reminder-banner[hidden] { display: none; }
+  .vp-cal-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px; padding: 12px; margin: 0 16px 10px; cursor: pointer;
+  }
+  .vp-cal-date {
+    flex: 0 0 54px; text-align: center; border-radius: 10px; padding: 8px 4px;
+    background: rgba(0, 168, 225, 0.13);
+  }
+  .vp-cal-date span { display: block; font-size: 20px; font-weight: 800; color: #fff; }
+  .vp-cal-date small { color: #00a8e1; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+  .vp-cal-info { flex: 1 1 auto; min-width: 0; }
+  .vp-cal-title { font-weight: 700; font-size: 14.5px; color: #fff; }
+  .vp-cal-dstr { color: #00a8e1; font-size: 12px; font-weight: 700; margin-top: 3px; }
+  .vp-cal-syn { color: #9aa3b8; font-size: 12.5px; margin-top: 5px; line-height: 1.45; }
+  .vp-bell {
+    flex: 0 0 auto; width: auto !important; margin: 0 !important; padding: 8px 10px !important;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: rgba(255, 255, 255, 0.07) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important; border-radius: 10px !important;
+    color: #9aa3b8; font-size: 10px !important; font-weight: 700; cursor: pointer;
+    box-shadow: none !important; text-shadow: none !important;
+  }
+  .vp-bell:hover { background: rgba(255, 255, 255, 0.12) !important; background-color: rgba(255,255,255,0.12) !important; }
+  .vp-bell.on { background: rgba(0, 168, 225, 0.16) !important; border-color: #00a8e1 !important; color: #00a8e1; }
+
+  /* ---------- Reproductor (en blanco por ahora) ---------- */
+  #vp-player-blank {
+    position: fixed; inset: 0; z-index: 900; background: #000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; color: #fff; text-align: center; padding: 24px;
+  }
+  #vp-player-blank[hidden] { display: none; }
+  #vp-player-blank .vp-back { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 14px; margin: 0 !important; }
+  .vp-player-ring {
+    width: 86px; height: 86px; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; color: #fff;
+  }
+  #vp-player-title { font-size: 16px; font-weight: 700; max-width: 80vw; }
+  .vp-player-sub { color: #9aa3b8; font-size: 13.5px; margin: 0; }
+
+  /* ---------- Toast ---------- */
+  #vp-toast {
+    position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(16px);
+    background: #131a30; border: 1px solid rgba(0, 168, 225, 0.45); color: #fff;
+    padding: 10px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s;
+    z-index: 950; max-width: 86vw; text-align: center;
+  }
+  #vp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* Mientras el login esté visible, la barra inferior se oculta */
+  body.vp-no-tabs { padding-bottom: 0 !important; }
+  body.vp-no-tabs #vp-tabbar { display: none !important; }
+</style>
+
+<!-- Barra inferior de la app -->
+<nav id="vp-tabbar" aria-label="Navegación principal">
+  <button type="button" data-tab="inicio" class="on" aria-label="Inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+    <span>Inicio</span>
+  </button>
+  <button type="button" data-tab="lista" aria-label="Mi Lista">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <span>Mi Lista</span>
+  </button>
+  <button type="button" data-tab="calendario" aria-label="Calendario">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <span>Calendario</span>
+  </button>
+  <button type="button" data-tab="buscar" aria-label="Buscar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <span>Buscar</span>
+  </button>
+</nav>
+
+<!-- Vista: Buscar -->
+<section id="vp-view-buscar" class="vp-view" aria-label="Buscar">
+  <div class="vp-view-head"><h2>Buscar</h2></div>
+  <div class="vp-searchbox">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="vp-search-input" type="search" placeholder="Anime, película..." autocomplete="off" enterkeyhint="search" aria-label="Buscar en VetPlex">
+    <button type="button" id="vp-search-clear" aria-label="Limpiar búsqueda" hidden>×</button>
+  </div>
+  <div id="vp-search-hint" class="vp-search-hint">Explora todo el catálogo</div>
+  <div id="vp-search-results" class="vp-grid"></div>
+</section>
+
+<!-- Vista: Mi Lista -->
+<section id="vp-view-lista" class="vp-view" aria-label="Mi Lista">
+  <div class="vp-view-head"><h2>Mi Lista</h2><p class="vp-view-sub">Todo lo que guardaste para ver después</p></div>
+  <div id="vp-lista-grid" class="vp-grid"></div>
+  <p id="vp-lista-empty" class="vp-empty">Aún no tienes nada en tu lista.<br>Toca «＋ Mi Lista» en cualquier anime para guardarlo aquí.</p>
+</section>
+
+<!-- Vista: Calendario -->
+<section id="vp-view-calendario" class="vp-view" aria-label="Calendario">
+  <div class="vp-view-head"><h2>Calendario</h2><p class="vp-view-sub">Estrenos y animes programados</p></div>
+  <div id="vp-cal-reminder-banner" hidden></div>
+  <h3 class="vp-sec">Próximamente</h3>
+  <div id="vp-cal-upcoming"></div>
+  <h3 class="vp-sec">Ya disponibles</h3>
+  <div id="vp-cal-past"></div>
+</section>
+
+<!-- Vista: Detalle del anime (estilo Disney+) -->
+<section id="vp-view-detalle" class="vp-view" aria-label="Detalle"></section>
+
+<!-- Reproductor en blanco (el sistema de video llega después) -->
+<div id="vp-player-blank" hidden>
+  <button type="button" class="vp-back" id="vp-player-back" aria-label="Volver">‹</button>
+  <div class="vp-player-ring">▶</div>
+  <div id="vp-player-title"></div>
+  <p class="vp-player-sub">Reproductor de video — próximamente</p>
+</div>
+
+<div id="vp-toast" role="status" aria-live="polite"></div>
+<script>
+/* ============================================================
+   VetPlex App — lógica de pestañas (2026-09-24)
+   Inicio · Buscar · Mi Lista · Calendario · Detalle · Player
+   Script clásico (no módulo): corre antes que los módulos y
+   expone window.vpGo / window.vpOpenDetail para las tarjetas.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- utilidades ---------- */
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  var norm = function (s) { return String(s || '').toLowerCase().trim(); };
+  var slug = function (s) {
+    return norm(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'x';
+  };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('#vp-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2300);
+  }
+  window.vpToast = toast;
+
+  var BELL_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
+
+  /* ---------- catálogo (lo expone el módulo con window.__vpAnimes) ---------- */
+  function vpCatalog() { return Array.isArray(window.__vpAnimes) ? window.__vpAnimes : []; }
+  function vpAnimeKey(a) {
+    if (!a) return '';
+    if (a._key) return 'k:' + a._key;
+    return 't:' + slug(a.title);
+  }
+  function vpFindAnime(title) {
+    var t = norm(title);
+    if (!t) return null;
+    var cat = vpCatalog();
+    return cat.filter(function (a) { return norm(a.title) === t; })[0] ||
+           cat.filter(function (a) { return norm(a.title).indexOf(t) !== -1; })[0] || null;
+  }
+
+  /* ---------- Mi Lista (local; Firebase se conserva vía addToList original) ---------- */
+  var LIST_KEY = 'vp_milista_v1';
+  function vpListGet() { return store.get(LIST_KEY, {}); }
+  function vpListHas(key) { return !!vpListGet()[key]; }
+  function vpListAdd(anime) {
+    if (!anime) return;
+    var key = vpAnimeKey(anime);
+    var all = vpListGet();
+    if (!all[key]) {
+      all[key] = {
+        key: key, title: anime.title || '', year: anime.year || '',
+        synopsis: anime.synopsis || '', imageUrl: anime.imageUrl || anime.image || '',
+        category: anime.category || '', subcategory: anime.subcategory || '', type: anime.type || ''
+      };
+      store.set(LIST_KEY, all);
+    }
+  }
+  function vpListRemove(key) {
+    var all = vpListGet();
+    if (all[key]) { delete all[key]; store.set(LIST_KEY, all); }
+  }
+  window.vpListAdd = vpListAdd;
+
+  /* Envolver window.addToList (la define el módulo): guarda copia local
+     con póster y datos para la vista Mi Lista, sin tocar Firebase. */
+  var vpAddWrapped = false;
+  function vpInstallAddToList() {
+    if (vpAddWrapped) return;
+    if (typeof window.addToList !== 'function') return;
+    var orig = window.addToList;
+    window.__vpAddOrig = orig;
+    vpAddWrapped = true;
+    window.addToList = function (anime) {
+      var obj = (anime && typeof anime === 'object') ? anime : vpFindAnime(anime);
+      if (obj) vpListAdd(obj);
+      var title = (anime && typeof anime === 'object') ? ((obj && obj.title) || '') : anime;
+      return orig.call(window, title);
+    };
+  }
+
+  /* La búsqueda vieja filtraba tarjetas por la página; ahora abre la vista Buscar */
+  function vpFixSearchAnime() {
+    if (typeof window.searchAnime === 'function' && !window.searchAnime._vp) {
+      var neu = function () { vpGo('buscar'); };
+      neu._vp = true;
+      window.searchAnime = neu;
+    }
+  }
+
+  /* ---------- película vs anime ---------- */
+  function vpIsMovie(a) {
+    var t = [a && a.type, a && a.category, a && a.subcategory].map(norm).join(' ');
+    return /pel[ií]cula|movie|film|largometraje/.test(t);
+  }
+
+  /* ---------- episodios (datos reales si existen; genéricos si no) ---------- */
+  function vpEpisodes(a) {
+    if (a && Array.isArray(a.episodes) && a.episodes.length) {
+      return a.episodes.map(function (e, i) {
+        return { n: (e && e.n) || i + 1, title: (e && e.title) || '' };
+      });
+    }
+    var c = parseInt(a && a.episodeCount, 10);
+    if (c > 0 && c <= 2000) {
+      var out = [];
+      for (var i = 1; i <= c; i++) out.push({ n: i, title: '' });
+      return out;
+    }
+    var gen = [];
+    for (var j = 1; j <= 12; j++) gen.push({ n: j, title: '' });
+    return gen;
+  }
+
+  /* ---------- navegación ---------- */
+  var TABS = ['inicio', 'buscar', 'lista', 'calendario'];
+  var vpCurrentTab = 'inicio';
+  var vpBackStack = [];
+  function vpGo(tab) {
+    vpCurrentTab = TABS.indexOf(tab) !== -1 ? tab : 'inicio';
+    $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
+    var el = $('#vp-view-' + vpCurrentTab);
+    if (el) el.classList.add('on');
+    $$('#vp-tabbar button').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-tab') === vpCurrentTab);
+    });
+    window.scrollTo(0, 0);
+    if (vpCurrentTab === 'buscar') vpRenderSearch();
+    if (vpCurrentTab === 'lista') vpRenderLista();
+    if (vpCurrentTab === 'calendario') { vpRenderCalendario(); vpCheckReminders(); }
+  }
+  window.vpGo = vpGo;
+
+  function vpOpenDetail(anime) {
+    if (!anime) return;
+    vpBackStack.push(vpCurrentTab === 'detalle' ? 'inicio' : vpCurrentTab);
+    renderDetail(anime);
+    $$('.vp-view').forEach(function (v) { v.classList.remove('on'); });
+    $('#vp-view-detalle').classList.add('on');
+    vpCurrentTab = 'detalle';
+    window.scrollTo(0, 0);
+  }
+  window.vpOpenDetail = vpOpenDetail;
+  function vpGoBack() { vpGo(vpBackStack.pop() || 'inicio'); }
+  window.vpGoBack = vpGoBack;
+
+  /* ---------- tarjeta reutilizable ---------- */
+  function vpCard(a) {
+    var card = document.createElement('article');
+    card.className = 'vp-card';
+    var img = document.createElement('img');
+    img.src = a.imageUrl || a.image || '';
+    img.alt = a.title || '';
+    img.loading = 'lazy';
+    img.onerror = function () { img.onerror = null; img.style.display = 'none'; };
+    var h3 = document.createElement('h3');
+    h3.textContent = a.title || 'Sin título';
+    var p = document.createElement('p');
+    p.textContent = a.year || '';
+    card.appendChild(img); card.appendChild(h3); card.appendChild(p);
+    card.addEventListener('click', function () { vpOpenDetail(a); });
+    return card;
+  }
+
+  /* ---------- vista Detalle ---------- */
+  function renderDetail(a) {
+    var v = $('#vp-view-detalle');
+    var movie = vpIsMovie(a);
+    var key = vpAnimeKey(a);
+    var inList = vpListHas(key);
+    var img = a.imageUrl || a.image || '';
+    var meta = [a.year, a.category, a.subcategory].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ');
+    var html = '';
+    html += '<div class="vp-det-backdrop"' + (img ? ' style="background-image:url(\'' + String(img).replace(/'/g, '') + '\')"' : '') + '></div>';
+    html += '<div class="vp-det-body">';
+    html += '<button type="button" class="vp-back" onclick="vpGoBack()" aria-label="Volver">‹</button>';
+    html += '<div class="vp-det-top">';
+    if (img) html += '<img class="vp-det-poster" src="' + esc(img) + '" alt="' + esc(a.title || '') + '" loading="lazy" onerror="this.style.display=\'none\'">';
+    html += '<div class="vp-det-info"><h2>' + esc(a.title || 'Sin título') + '</h2>';
+    if (meta) html += '<div class="vp-det-meta">' + meta + '</div>';
+    html += '<span class="vp-badge ' + (movie ? 'vp-badge-movie' : 'vp-badge-serie') + '">' + (movie ? 'Película' : 'Anime') + '</span>';
+    html += '</div></div>';
+    if (a.synopsis) html += '<p class="vp-det-syn">' + esc(a.synopsis) + '</p>';
+    html += '<div class="vp-det-actions">';
+    html += '<button type="button" class="vp-btn vp-btn-primary" data-act="play">▶ ' + (movie ? 'Ver película' : 'Ver ahora') + '</button>';
+    html += '<button type="button" class="vp-btn vp-btn-ghost" data-act="list">' + (inList ? '✓ En mi lista' : '＋ Mi Lista') + '</button>';
+    html += '</div>';
+    if (!movie) {
+      html += '<h3 class="vp-sec" style="margin-left:0">Episodios</h3><div id="vp-eps"></div>';
+    }
+    html += '<p class="vp-note">El reproductor de video llegará en una próxima actualización.</p>';
+    html += '</div>';
+    v.innerHTML = html;
+
+    var bPlay = v.querySelector('[data-act="play"]');
+    if (bPlay) bPlay.addEventListener('click', function () { vpOpenPlayer(a.title || ''); });
+    var bList = v.querySelector('[data-act="list"]');
+    if (bList) bList.addEventListener('click', function () {
+      if (vpListHas(key)) { vpListRemove(key); toast('Eliminado de tu lista'); }
+      else {
+        vpListAdd(a);
+        if (typeof window.__vpAddOrig === 'function') window.__vpAddOrig(a.title || '');
+        else toast('Añadido a tu lista');
+      }
+      renderDetail(a);
+    });
+    if (!movie) {
+      var box = $('#vp-eps', v);
+      vpEpisodes(a).forEach(function (e) {
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'vp-ep';
+        row.innerHTML = '<span class="vp-ep-n">' + e.n + '</span>' +
+          '<span class="vp-ep-t">Episodio ' + e.n + (e.title ? ' — ' + esc(e.title) : '') + '</span>' +
+          '<span class="vp-ep-play">▶</span>';
+        row.addEventListener('click', function () { vpOpenPlayer((a.title || '') + ' · Episodio ' + e.n); });
+        box.appendChild(row);
+      });
+    }
+  }
+
+  /* ---------- reproductor en blanco ---------- */
+  function vpOpenPlayer(label) {
+    $('#vp-player-title').textContent = label || '';
+    $('#vp-player-blank').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function vpClosePlayer() {
+    $('#vp-player-blank').hidden = true;
+    document.body.style.overflow = '';
+  }
+  window.vpOpenPlayer = vpOpenPlayer;
+  window.vpClosePlayer = vpClosePlayer;
+
+  /* ---------- vista Buscar ---------- */
+  function vpRenderSearch() {
+    var inp = $('#vp-search-input');
+    var q = norm(inp ? inp.value : '');
+    var box = $('#vp-search-results');
+    var hint = $('#vp-search-hint');
+    box.innerHTML = '';
+    var items = vpCatalog().filter(function (a) { return a && a.title && String(a.title).trim(); });
+    var res = q ? items.filter(function (a) {
+      return norm(a.title).indexOf(q) !== -1 || norm(a.synopsis).indexOf(q) !== -1 || norm(a.category).indexOf(q) !== -1;
+    }) : items;
+    if (hint) {
+      hint.textContent = q
+        ? (res.length ? res.length + ' resultado(s)' : 'Sin resultados para "' + (inp.value || '') + '"')
+        : (items.length ? 'Todo el catálogo · ' + items.length + ' títulos' : 'Cargando catálogo…');
+    }
+    res.forEach(function (a) { box.appendChild(vpCard(a)); });
+    var clr = $('#vp-search-clear');
+    if (clr) clr.hidden = !q;
+  }
+  window.vpRenderSearch = vpRenderSearch;
+
+  /* ---------- vista Mi Lista ---------- */
+  function vpRenderLista() {
+    var all = vpListGet();
+    var keys = Object.keys(all);
+    var box = $('#vp-lista-grid');
+    box.innerHTML = '';
+    var empty = $('#vp-lista-empty');
+    if (empty) empty.style.display = keys.length ? 'none' : '';
+    keys.forEach(function (k) {
+      var wrap = document.createElement('div');
+      wrap.className = 'vp-cardwrap';
+      wrap.appendChild(vpCard(all[k]));
+      var x = document.createElement('button');
+      x.type = 'button'; x.className = 'vp-card-x'; x.textContent = '×';
+      x.setAttribute('aria-label', 'Quitar de mi lista');
+      x.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        vpListRemove(k); vpRenderLista(); toast('Eliminado de tu lista');
+      });
+      wrap.appendChild(x);
+      box.appendChild(wrap);
+    });
+  }
+
+  /* ---------- vista Calendario ---------- */
+  var MESES = { enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11 };
+  var MES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  function vpParseEsDate(s) {
+    if (!s) return null;
+    s = String(s).trim();
+    var m = s.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
+    if (m && MESES[norm(m[2])] != null) return new Date(+m[3], MESES[norm(m[2])], +m[1]);
+    m = s.match(/([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
+    if (m && MESES[norm(m[1])] != null) return new Date(+m[2], MESES[norm(m[1])], 1);
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  /* Recolección automática: items programados del carrusel + animes del
+     catálogo con campo de estreno (estreno/releaseDate/fechaEstreno/
+     nextEpisode/proximoEpisodio/programado). */
+  function vpCollectScheduled() {
+    var out = [];
+    var seen = {};
+    $$('.carousel-item[data-info]').forEach(function (item) {
+      try {
+        var info = JSON.parse(item.getAttribute('data-info'));
+        if (!info || !info.title || seen['s:' + norm(info.title)]) return;
+        seen['s:' + norm(info.title)] = 1;
+        var img = item.querySelector('img');
+        out.push({
+          key: 'sched:' + slug(info.title), title: info.title,
+          dateStr: info.date || '', date: vpParseEsDate(info.date),
+          synopsis: info.synopsis || '', imageUrl: img ? img.src : ''
+        });
+      } catch (e) {}
+    });
+    vpCatalog().forEach(function (a) {
+      if (!a || !a.title) return;
+      var ds = a.estreno || a.releaseDate || a.fechaEstreno || a.nextEpisode || a.proximoEpisodio || a.programado;
+      if (!ds || seen['c:' + vpAnimeKey(a)]) return;
+      seen['c:' + vpAnimeKey(a)] = 1;
+      out.push({
+        key: 'sched:' + vpAnimeKey(a), title: a.title,
+        dateStr: String(ds), date: vpParseEsDate(ds),
+        synopsis: a.synopsis || '', imageUrl: a.imageUrl || a.image || '', anime: a
+      });
+    });
+    return out;
+  }
+  window.vpCollectScheduled = vpCollectScheduled;
+
+  var REM_KEY = 'vp_reminders_v1';
+  function vpRemGet() { return store.get(REM_KEY, {}); }
+  function vpToggleReminder(item) {
+    var all = vpRemGet();
+    var cur = all[item.key];
+    if (cur && cur.enabled) {
+      cur.enabled = false;
+      store.set(REM_KEY, all);
+      toast('Recordatorio desactivado');
+    } else {
+      all[item.key] = {
+        title: item.title, dateStr: item.dateStr || '',
+        dateISO: item.date ? item.date.toISOString() : null,
+        enabled: true, notified: false
+      };
+      store.set(REM_KEY, all);
+      toast('Te avisaremos del estreno');
+      if ('Notification' in window && Notification.permission === 'default') {
+        try { Notification.requestPermission().catch(function () {}); }
+        catch (e) { try { Notification.requestPermission(); } catch (e2) {} }
+      }
+    }
+    vpRenderCalendario();
+  }
+  function vpCalRow(it, rem) {
+    var row = document.createElement('div');
+    row.className = 'vp-cal-row';
+    var d = it.date;
+    var badge = d
+      ? '<div class="vp-cal-date"><span>' + String(d.getDate()).padStart(2, '0') + '</span><small>' + MES_CORTO[d.getMonth()] + '</small></div>'
+      : '<div class="vp-cal-date"><span>?</span><small>FECHA</small></div>';
+    row.innerHTML = badge + '<div class="vp-cal-info"><div class="vp-cal-title">' + esc(it.title) + '</div>' +
+      (it.dateStr ? '<div class="vp-cal-dstr">' + esc(it.dateStr) + '</div>' : '') +
+      (it.synopsis ? '<div class="vp-cal-syn">' + esc(String(it.synopsis).slice(0, 110)) + '…</div>' : '') + '</div>';
+    var r = rem[it.key];
+    var on = !!(r && r.enabled);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'vp-bell' + (on ? ' on' : '');
+    b.setAttribute('aria-label', on ? 'Desactivar recordatorio' : 'Avísame del estreno');
+    b.innerHTML = BELL_SVG + '<span>' + (on ? 'Avisado' : 'Avísame') + '</span>';
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); vpToggleReminder(it); });
+    row.appendChild(b);
+    row.addEventListener('click', function () {
+      vpOpenDetail(it.anime || { title: it.title, year: '', synopsis: it.synopsis, imageUrl: it.imageUrl });
+    });
+    return row;
+  }
+  function vpRenderCalendario() {
+    var items = vpCollectScheduled();
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var up = items.filter(function (i) { return i.date && i.date >= now; }).sort(function (a, b) { return a.date - b.date; });
+    var nodate = items.filter(function (i) { return !i.date; });
+    var past = items.filter(function (i) { return i.date && i.date < now; }).sort(function (a, b) { return b.date - a.date; });
+    var rem = vpRemGet();
+    var boxUp = $('#vp-cal-upcoming');
+    var boxPast = $('#vp-cal-past');
+    boxUp.innerHTML = ''; boxPast.innerHTML = '';
+    var upcoming = up.concat(nodate);
+    if (!upcoming.length) boxUp.innerHTML = '<p class="vp-empty">No hay estrenos próximos.<br>Los animes programados aparecerán aquí automáticamente.</p>';
+    else upcoming.forEach(function (it) { boxUp.appendChild(vpCalRow(it, rem)); });
+    if (!past.length) boxPast.innerHTML = '<p class="vp-empty">Nada por aquí todavía.</p>';
+    else past.forEach(function (it) { boxPast.appendChild(vpCalRow(it, rem)); });
+  }
+  /* Revisa recordatorios vencidos: aviso en la app + notificación si hay permiso */
+  function vpCheckReminders() {
+    var all = vpRemGet();
+    var changed = false;
+    var due = [];
+    var limit = Date.now() + 48 * 3600 * 1000;
+    Object.keys(all).forEach(function (k) {
+      var r = all[k];
+      if (r.enabled && !r.notified && r.dateISO) {
+        var t = new Date(r.dateISO).getTime();
+        if (t <= limit) { r.notified = true; changed = true; due.push(r); }
+      }
+    });
+    if (changed) store.set(REM_KEY, all);
+    due.forEach(function (r) {
+      toast('Estreno: ' + r.title + (r.dateStr ? ' — ' + r.dateStr : ''));
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification('VetPlex — Estreno', { body: r.title + (r.dateStr ? ' · ' + r.dateStr : '') }); } catch (e) {}
+      }
+    });
+    var banner = $('#vp-cal-reminder-banner');
+    if (banner) {
+      var active = Object.keys(all).map(function (k) { return all[k]; }).filter(function (r) { return r.enabled; });
+      if (active.length) {
+        banner.hidden = false;
+        var names = active.slice(0, 3).map(function (r) { return r.title; }).join(', ');
+        banner.innerHTML = '<strong>' + active.length + '</strong> recordatorio(s) activo(s): ' + esc(names) + (active.length > 3 ? '…' : '');
+      } else { banner.hidden = true; }
+    }
+  }
+
+  /* ---------- el buscador del header ahora abre la vista Buscar ---------- */
+  function vpWireHeaderSearch() {
+    var si = $('#search-input');
+    var openSearch = function () {
+      vpGo('buscar');
+      setTimeout(function () {
+        var q = $('#vp-search-input');
+        if (q) { try { q.focus({ preventScroll: true }); } catch (e) { q.focus(); } }
+      }, 80);
+    };
+    if (si && !si.dataset.vpWired) {
+      si.dataset.vpWired = '1';
+      si.addEventListener('focus', function () { si.blur(); si.value = ''; openSearch(); });
+    }
+    var btn = document.querySelector('header .search-icon-btn');
+    if (btn && !btn.dataset.vpWired) {
+      btn.dataset.vpWired = '1';
+      btn.removeAttribute('onclick');
+      btn.addEventListener('click', openSearch);
+    }
+  }
+
+  /* ---------- inicio: envolver el contenido home en su vista ---------- */
+  function vpWrapHome() {
+    if ($('#vp-view-inicio')) return;
+    var header = document.querySelector('header');
+    if (!header) return;
+    var view = document.createElement('div');
+    view.id = 'vp-view-inicio';
+    view.className = 'vp-view';
+    header.parentNode.insertBefore(view, header.nextSibling);
+    var wanted = [];
+    Array.prototype.forEach.call(document.body.children, function (n) {
+      if (n === view) return;
+      if (n.id === 'vp-hero' || n.id === 'vp-catalogo-wrap') { wanted.push(n); return; }
+      if (n.classList && n.classList.contains('carousel-container')) { wanted.push(n); return; }
+      if (n.classList && n.classList.contains('section-title') && /octubre/i.test(n.textContent || '')) { wanted.push(n); }
+    });
+    wanted.forEach(function (n) { view.appendChild(n); });
+  }
+
+  /* ---------- init ---------- */
+  function vpInit() {
+    vpWrapHome();
+    $$('#vp-tabbar button').forEach(function (b) {
+      b.addEventListener('click', function () { vpGo(b.getAttribute('data-tab')); });
+    });
+    vpWireHeaderSearch();
+    var inp = $('#vp-search-input');
+    if (inp && !inp.dataset.vpWired) {
+      inp.dataset.vpWired = '1';
+      inp.addEventListener('input', vpRenderSearch);
+    }
+    var clr = $('#vp-search-clear');
+    if (clr) clr.addEventListener('click', function () { inp.value = ''; vpRenderSearch(); inp.focus(); });
+    var pb = $('#vp-player-back');
+    if (pb) pb.addEventListener('click', vpClosePlayer);
+    var po = $('#vp-player-blank');
+    if (po) po.addEventListener('click', function (e) { if (e.target === po) vpClosePlayer(); });
+    vpInstallAddToList();
+    vpFixSearchAnime();
+    vpCheckReminders();
+    /* Ocultar la barra inferior mientras el login esté visible (sin tocar auth) */
+    var ov = $('#overlay');
+    if (ov && !ov.dataset.vpObs) {
+      ov.dataset.vpObs = '1';
+      var syncOv = function () { document.body.classList.toggle('vp-no-tabs', !ov.classList.contains('vp-hidden')); };
+      if (window.MutationObserver) new MutationObserver(syncOv).observe(ov, { attributes: true, attributeFilter: ['class'] });
+      syncOv();
+    }
+    vpGo('inicio');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      vpInit();
+      setTimeout(function () { vpInstallAddToList(); vpFixSearchAnime(); }, 1500);
+    });
+  } else {
+    vpInit();
+    setTimeout(function () { vpInstallAddToList(); vpFixSearchAnime(); }, 1500);
+  }
+})();
+</script>
+
 </body>
 
   </html>
