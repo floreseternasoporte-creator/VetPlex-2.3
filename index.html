@@ -16,10 +16,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VetPlex Halloween</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Creepster&display=swap');
     body {
       margin: 0;
-      font-family: 'Creepster', cursive, sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
       /* FIX: se elimino la foto de Unsplash como fondo del body (era un resto
          del documento de Halloween concatenado; se veia como "imagen extrana"
          y franja azulada en iPhone). El fondo oscuro lo define background-color
@@ -104,445 +103,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="hidden_files/auth-cinematic.css">
-  <script type="module">
-    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
-      authDomain: "vetplex-animes.firebaseapp.com",
-      projectId: "vetplex-animes",
-      storageBucket: "vetplex-animes.appspot.com",
-      messagingSenderId: "485618641909",
-      appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
-      databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
-    };
-
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    const overlay = document.getElementById('overlay');
-    const loginBox = document.getElementById('login-form');
-    const registerBox = document.getElementById('register-form');
-    const authTitle = document.getElementById('auth-title');
-    const authSub = document.getElementById('auth-sub');
-    const switchText = document.getElementById('auth-switch-text');
-    const switchBtn = document.getElementById('switch-auth');
-    const loginError = document.getElementById('login-error');
-    const loginError2 = document.getElementById('login-error2');
-    const registerError = document.getElementById('register-error');
-    const registerError2 = document.getElementById('register-error2');
-    const recoverBox = document.getElementById('recover-box');
-    const recoverMsg = document.getElementById('recover-msg');
-    const rememberMe = document.getElementById('remember-me');
-    const strengthBox = document.querySelector('#register-form .vp-strength');
-    const strengthLabel = document.querySelector('#register-form .vp-strength-label');
-    /* Pasos del flujo en 2 pasos (estilo X/Google): identificador -> contraseña */
-    const loginStep1 = document.getElementById('login-step-1');
-    const loginStep2 = document.getElementById('login-step-2');
-    const registerStep1 = document.getElementById('register-step-1');
-    const registerStep2 = document.getElementById('register-step-2');
-
-    const showAuth = () => { overlay.classList.remove('vp-hidden'); document.body.style.overflow = 'hidden'; };
-    const hideAuth = () => {
-      overlay.classList.add('vp-hidden');
-      document.body.style.overflow = '';
-      document.getElementById('login-password').value = '';
-      document.getElementById('register-password').value = '';
-      /* al cerrar, todo vuelve al paso 1 para la próxima vez */
-      loginStep1.hidden = false; loginStep2.hidden = true;
-      registerStep1.hidden = false; registerStep2.hidden = true;
-      recoverBox.hidden = true;
-    };
-
-    const friendlyError = (error) => {
-      switch (error && error.code) {
-        case 'auth/invalid-email': return 'Escribe un correo electrónico válido.';
-        case 'auth/user-not-found': return 'No encontramos una cuenta con ese correo electrónico.';
-        case 'auth/wrong-password': return 'Contraseña incorrecta. Inténtalo de nuevo.';
-        case 'auth/invalid-credential': return 'Correo o contraseña incorrectos. Inténtalo de nuevo.';
-        case 'auth/email-already-in-use': return 'Este correo ya está registrado. Inicia sesión.';
-        case 'auth/weak-password': return 'La contraseña debe tener al menos 6 caracteres.';
-        case 'auth/too-many-requests': return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
-        case 'auth/network-request-failed': return 'No pudimos conectar. Revisa tu internet e inténtalo de nuevo.';
-        case 'auth/user-disabled': return 'Esta cuenta está deshabilitada. Contacta a soporte.';
-        case 'auth/operation-not-allowed': return 'El registro con correo está deshabilitado. Contacta a soporte.';
-        case 'auth/invalid-api-key': return 'Error de configuración. Inténtalo más tarde.';
-        case 'auth/app-not-authorized': return 'Error de configuración. Inténtalo más tarde.';
-        default: return 'Ocurrió un error. Inténtalo de nuevo.';
-      }
-    };
-
-    const showError = (el, message) => { el.textContent = message; el.classList.add('visible'); };
-    const clearError = (el) => { el.textContent = ''; el.classList.remove('visible'); };
-
-    /* Validación inline: pinta el campo (is-invalid/is-valid) y escribe el <p class="vp-hint"> */
-    const setFieldState = (inputId, valid, message) => {
-      const input = document.getElementById(inputId);
-      const field = input.closest('.vp-field');
-      const hint = field ? field.querySelector('.vp-hint') : null;
-      if (field) {
-        field.classList.toggle('is-invalid', !valid);
-        field.classList.toggle('is-valid', valid && input.value.trim().length > 0);
-      }
-      if (hint) { hint.textContent = valid ? '' : message; }
-    };
-    const clearFieldState = (inputId) => {
-      const input = document.getElementById(inputId);
-      const field = input.closest('.vp-field');
-      const hint = field ? field.querySelector('.vp-hint') : null;
-      if (field) { field.classList.remove('is-invalid'); field.classList.remove('is-valid'); }
-      if (hint) { hint.textContent = ''; }
-    };
-    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValidEmail = (email) => EMAIL_RE.test(email);
-
-    /* Transición de vista: desplazamiento lateral suave al cambiar de paso */
-    const enterView = (el) => {
-      el.classList.remove('vp-view-enter');
-      void el.offsetWidth; /* reflow para relanzar la animación */
-      el.classList.add('vp-view-enter');
-    };
-
-    /* Foco automático solo con puntero fino: en móvil no se abre el teclado solo */
-    const focusFine = (el) => {
-      if (el && window.matchMedia && window.matchMedia('(pointer:fine)').matches) {
-        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
-      }
-    };
-
-    /* Chip del paso 2: avatar con inicial + correo (toque humano) */
-    const fillChip = (email, avatarEl, emailEl) => {
-      emailEl.textContent = email;
-      avatarEl.textContent = (email.trim().charAt(0) || '?').toUpperCase();
-    };
-
-    const goStep = (s1, s2, first) => {
-      s1.hidden = !first;
-      s2.hidden = first;
-      enterView(first ? s1 : s2);
-    };
-
-    const showLogin = () => {
-      loginBox.style.display = 'block';
-      registerBox.style.display = 'none';
-      authTitle.textContent = 'Te damos la bienvenida';
-      authSub.textContent = 'Inicia sesión para continuar a VetPlex.';
-      switchText.textContent = '¿Primera vez en VetPlex?';
-      switchBtn.textContent = 'Crea tu cuenta';
-      clearError(loginError);
-      clearError(loginError2);
-      recoverBox.hidden = true;
-      recoverMsg.textContent = '';
-      recoverMsg.classList.remove('ok');
-      goStep(loginStep1, loginStep2, true);
-      focusFine(document.getElementById('login-email'));
-    };
-
-    const showRegister = () => {
-      loginBox.style.display = 'none';
-      registerBox.style.display = 'block';
-      authTitle.textContent = 'Crea tu cuenta';
-      authSub.textContent = 'Gratis, en menos de un minuto.';
-      switchText.textContent = '¿Ya tienes cuenta?';
-      switchBtn.textContent = 'Inicia sesión';
-      clearError(registerError);
-      clearError(registerError2);
-      goStep(registerStep1, registerStep2, true);
-      focusFine(document.getElementById('register-email'));
-    };
-
-    let registering = false;
-    switchBtn.addEventListener('click', () => {
-      registering = !registering;
-      if (registering) { showRegister(); } else { showLogin(); }
-    });
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) { hideAuth(); } else { showAuth(); }
-    });
-
-    /* Estado de carga: clase .is-loading (spinner CSS) + botón deshabilitado */
-    const setLoading = (btn, loading) => {
-      btn.disabled = loading;
-      btn.classList.toggle('is-loading', loading);
-    };
-
-    /* Validación del correo (paso 1, común a login y registro) */
-    const validateEmailStep = (inputId, errorEl) => {
-      const email = document.getElementById(inputId).value.trim();
-      clearError(errorEl);
-      clearFieldState(inputId);
-      if (!email) { setFieldState(inputId, false, 'Escribe tu correo electrónico.'); return null; }
-      if (!isValidEmail(email)) { setFieldState(inputId, false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); return null; }
-      setFieldState(inputId, true, '');
-      return email;
-    };
-
-    document.getElementById('login-next').addEventListener('click', () => {
-      const email = validateEmailStep('login-email', loginError);
-      if (!email) return;
-      fillChip(email, document.getElementById('login-chip-avatar'), document.getElementById('login-chip-email'));
-      goStep(loginStep1, loginStep2, false);
-      focusFine(document.getElementById('login-password'));
-    });
-    document.getElementById('login-back').addEventListener('click', () => {
-      goStep(loginStep1, loginStep2, true);
-      focusFine(document.getElementById('login-email'));
-    });
-
-    document.getElementById('login-button').addEventListener('click', () => {
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      const btn = document.getElementById('login-button');
-      clearError(loginError2);
-      clearFieldState('login-password');
-      if (!password) { setFieldState('login-password', false, 'Escribe tu contraseña.'); return; }
-      setFieldState('login-password', true, '');
-      setLoading(btn, true);
-      /* "Recuérdame": persistencia local (sesión recordada) o solo de la sesión actual */
-      setPersistence(auth, rememberMe.checked ? browserLocalPersistence : browserSessionPersistence)
-        .then(() => signInWithEmailAndPassword(auth, email, password))
-        .then(() => { hideAuth(); })
-        .catch((error) => { showError(loginError2, friendlyError(error)); })
-        .finally(() => { setLoading(btn, false); });
-    });
-
-    document.getElementById('register-next').addEventListener('click', () => {
-      const email = validateEmailStep('register-email', registerError);
-      if (!email) return;
-      fillChip(email, document.getElementById('register-chip-avatar'), document.getElementById('register-chip-email'));
-      goStep(registerStep1, registerStep2, false);
-      focusFine(document.getElementById('register-password'));
-    });
-    document.getElementById('register-back').addEventListener('click', () => {
-      goStep(registerStep1, registerStep2, true);
-      focusFine(document.getElementById('register-email'));
-    });
-
-    document.getElementById('register-button').addEventListener('click', () => {
-      const email = document.getElementById('register-email').value.trim();
-      const password = document.getElementById('register-password').value;
-      const btn = document.getElementById('register-button');
-      clearError(registerError2);
-      clearFieldState('register-password');
-      if (!password) { setFieldState('register-password', false, 'Crea una contraseña.'); return; }
-      if (password.length < 6) { setFieldState('register-password', false, 'La contraseña debe tener al menos 6 caracteres.'); return; }
-      setFieldState('register-password', true, '');
-      setLoading(btn, true);
-      createUserWithEmailAndPassword(auth, email, password)
-        .then(() => sendEmailVerification(auth.currentUser))
-        .then(() => { hideAuth(); })
-        .catch((error) => { showError(registerError2, friendlyError(error)); })
-        .finally(() => { setLoading(btn, false); });
-    });
-
-    /* Recuperación: oculta los pasos y muestra su propia vista.
-       La lógica Firebase (sendPasswordResetEmail) no se toca. */
-    const showRecover = () => {
-      loginStep1.hidden = true;
-      loginStep2.hidden = true;
-      recoverBox.hidden = false;
-      authTitle.textContent = 'Recupera tu contraseña';
-      authSub.textContent = 'Te enviamos un enlace para restablecerla.';
-      recoverMsg.textContent = '';
-      recoverMsg.classList.remove('ok');
-      enterView(recoverBox);
-      focusFine(document.getElementById('recover-email'));
-    };
-    const hideRecover = () => {
-      recoverBox.hidden = true;
-      showLogin();
-    };
-    document.getElementById('forgot-password').addEventListener('click', () => {
-      if (recoverBox.hidden) { showRecover(); } else { hideRecover(); }
-    });
-    document.getElementById('recover-back').addEventListener('click', hideRecover);
-    /* Enter en el buscador: se enlaza cuando el DOM está listo (el input vive más abajo en el documento) */
-    const bindSearchEnter = () => {
-      const searchInputEl = document.getElementById('search-input');
-      if (searchInputEl && !searchInputEl.dataset.enterBound) {
-        searchInputEl.dataset.enterBound = '1';
-        searchInputEl.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') { e.preventDefault(); searchAnime(); }
-        });
-      }
-    };
-  
-  if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', bindSearchEnter);
-    } else {
-      bindSearchEnter();
-    }
-
-    document.getElementById('recover-button').addEventListener('click', () => {
-      const email = document.getElementById('recover-email').value.trim();
-      const btn = document.getElementById('recover-button');
-      recoverMsg.classList.remove('ok');
-      clearFieldState('recover-email');
-      if (!email) { setFieldState('recover-email', false, 'Escribe tu correo electrónico.'); return; }
-      if (!isValidEmail(email)) { setFieldState('recover-email', false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); return; }
-      setFieldState('recover-email', true, '');
-      setLoading(btn, true);
-      sendPasswordResetEmail(auth, email)
-        .then(() => {
-          recoverMsg.textContent = 'Listo. Revisa tu correo, te enviamos el enlace de recuperación.';
-          recoverMsg.classList.add('ok');
-        })
-        .catch((error) => { recoverMsg.textContent = friendlyError(error); })
-        .finally(() => { setLoading(btn, false); });
-    });
-
-    const enterPairs = [['login-email', 'login-next'], ['login-password', 'login-button'], ['register-email', 'register-next'], ['register-password', 'register-button'], ['recover-email', 'recover-button']];
-    enterPairs.forEach((pair) => {
-      document.getElementById(pair[0]).addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { document.getElementById(pair[1]).click(); }
-      });
-    });
-
-    /* Ojo mostrar/ocultar contraseña (el ojo está dibujado en CSS; el JS alterna type + estado) */
-    document.querySelectorAll('#overlay .vp-pw-toggle').forEach((toggle) => {
-      toggle.addEventListener('click', () => {
-        const input = toggle.closest('.vp-field').querySelector('input');
-        const show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        toggle.classList.toggle('is-off', !show);
-        toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-      });
-    });
-
-    /* Medidor de fuerza: 0 vacío, 1 débil, 2 aceptable, 3 buena, 4 fuerte */
-    const STRENGTH_LABELS = ['', 'Contraseña débil', 'Aceptable', 'Buena', 'Fuerte'];
-    const strengthInput = document.getElementById('register-password');
-    strengthInput.addEventListener('input', () => {
-      const pw = strengthInput.value;
-      let level = 0;
-      if (pw.length > 0) {
-        level = 1;
-        if (pw.length >= 8) level++;
-        if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) level++;
-        if (/\d/.test(pw)) level++;
-        if (/[^A-Za-z0-9]/.test(pw) || pw.length >= 12) level++;
-        level = Math.min(level, 4);
-      }
-      strengthBox.setAttribute('data-level', String(level));
-      strengthLabel.textContent = level > 0 ? STRENGTH_LABELS[level] : 'Usa 8+ caracteres con letras y números.';
-    });
-
-    showLogin();
-
-  </script>
 </head>
 
-<body>
-  <div id="overlay">
-    <div class="ax-auth">
-      <aside class="ax-brand">
-        <div class="ax-brand-inner">
-          <div class="ax-ring" aria-hidden="true"></div>
-          <span class="ax-wordmark">VETPLEX</span>
-          <h2 class="ax-tagline">Tu universo anime,<br>en un solo lugar.</h2>
-          <ul class="ax-points">
-            <li>Miles de animes, siempre a tu alcance</li>
-            <li>Tu lista y tu progreso en todos tus dispositivos</li>
-            <li>Gratis. Sin complicaciones.</li>
-          </ul>
-        </div>
-        <p class="ax-fine">&copy; 2026 VetPlex</p>
-      </aside>
-      <main class="ax-panel">
-        <div class="ax-card">
-          <div class="ax-mobile-brand" aria-hidden="true">
-            <span class="ax-ring"></span>
-            <span class="ax-wordmark">VETPLEX</span>
-          </div>
-          <h1 class="ax-title" id="auth-title">Te damos la bienvenida</h1>
-          <p class="ax-sub" id="auth-sub">Inicia sesi&oacute;n para continuar a VetPlex.</p>
-
-          <div id="login-form">
-            <section class="ax-step" id="login-step-1" aria-label="Paso 1 de 2: tu correo electr&oacute;nico">
-              <div class="vp-field ax-float">
-                <input type="email" id="login-email" placeholder=" " autocomplete="email" maxlength="254">
-                <label for="login-email">Correo electr&oacute;nico</label>
-                <p class="vp-hint"></p>
-              </div>
-              <p class="vp-error" id="login-error" role="alert"></p>
-              <button type="button" id="login-next" class="vp-btn-primary">Siguiente</button>
-            </section>
-            <section class="ax-step" id="login-step-2" hidden aria-label="Paso 2 de 2: tu contrase&ntilde;a">
-              <button type="button" class="ax-chip" id="login-back" aria-label="Cambiar de correo">
-                <span class="ax-chip-avatar" id="login-chip-avatar">?</span>
-                <span class="ax-chip-email" id="login-chip-email"></span>
-                <span class="ax-chip-change">Cambiar</span>
-              </button>
-              <div class="vp-field ax-float has-toggle">
-                <input type="password" id="login-password" placeholder=" " autocomplete="current-password" maxlength="128">
-                <label for="login-password">Contrase&ntilde;a</label>
-                <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
-                <p class="vp-hint"></p>
-              </div>
-              <p class="vp-error" id="login-error2" role="alert"></p>
-              <button type="button" id="login-button" class="vp-btn-primary">Iniciar sesi&oacute;n</button>
-              <div class="vp-opts">
-                <label class="vp-remember"><input type="checkbox" id="remember-me" checked> Recu&eacute;rdame</label>
-                <button type="button" id="forgot-password" class="vp-link">&iquest;Olvidaste tu contrase&ntilde;a?</button>
-              </div>
-            </section>
-            <div class="vp-recover" id="recover-box" hidden>
-              <p class="vp-recover-sub">Introduce el correo de tu cuenta y sigue el enlace que recibas.</p>
-              <div class="vp-field ax-float">
-                <input type="email" id="recover-email" placeholder=" " maxlength="254">
-                <label for="recover-email">Correo electr&oacute;nico</label>
-                <p class="vp-hint"></p>
-              </div>
-              <button type="button" id="recover-button" class="vp-btn-ghost">Enviar enlace de recuperaci&oacute;n</button>
-              <p class="vp-note" id="recover-msg" role="alert"></p>
-              <button type="button" id="recover-back" class="vp-link vp-back">&larr; Volver a iniciar sesi&oacute;n</button>
-            </div>
-          </div>
-
-          <div id="register-form" style="display:none;">
-            <section class="ax-step" id="register-step-1" aria-label="Paso 1 de 2: tu correo electr&oacute;nico">
-              <div class="vp-field ax-float">
-                <input type="email" id="register-email" placeholder=" " autocomplete="email" maxlength="254">
-                <label for="register-email">Correo electr&oacute;nico</label>
-                <p class="vp-hint"></p>
-              </div>
-              <p class="vp-error" id="register-error" role="alert"></p>
-              <button type="button" id="register-next" class="vp-btn-primary">Siguiente</button>
-            </section>
-            <section class="ax-step" id="register-step-2" hidden aria-label="Paso 2 de 2: crea tu contrase&ntilde;a">
-              <button type="button" class="ax-chip" id="register-back" aria-label="Cambiar de correo">
-                <span class="ax-chip-avatar" id="register-chip-avatar">?</span>
-                <span class="ax-chip-email" id="register-chip-email"></span>
-                <span class="ax-chip-change">Cambiar</span>
-              </button>
-              <div class="vp-field ax-float has-toggle">
-                <input type="password" id="register-password" placeholder=" " autocomplete="new-password" maxlength="128">
-                <label for="register-password">Crea una contrase&ntilde;a</label>
-                <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
-                <p class="vp-hint"></p>
-              </div>
-              <div class="vp-strength" data-level="0">
-                <div class="vp-strength-bar"><span></span><span></span><span></span><span></span></div>
-                <p class="vp-strength-label">Usa 8+ caracteres con letras y n&uacute;meros.</p>
-              </div>
-              <p class="vp-error" id="register-error2" role="alert"></p>
-              <button type="button" id="register-button" class="vp-btn-primary">Crear cuenta</button>
-              <p class="vp-note">Te enviaremos un correo de verificaci&oacute;n.</p>
-            </section>
-          </div>
-
-          <p class="vp-switch"><span id="auth-switch-text">&iquest;Primera vez en VetPlex?</span> <button type="button" id="switch-auth" class="vp-link-strong">Crea tu cuenta</button></p>
-        </div>
-      </main>
-    </div>
-  </div>
-
-</body>
-
-</html>
 
 
 <!DOCTYPE html>
@@ -1010,7 +572,7 @@
     <div class="banner-content">
       <div class="banner-title" id="vp-hero-title">VetPlex</div>
       <div class="banner-meta-row"><span class="vp-badge vp-badge-serie" id="vp-hero-badge">Anime</span><span class="banner-meta" id="vp-hero-meta"></span></div>
-      <div class="banner-description" id="vp-hero-desc">Cargando destacados…</div>
+      <div class="banner-description" id="vp-hero-desc">Muy pronto encontrarás aquí los destacados de VetPlex.</div>
       <div class="banner-buttons">
         <button type="button" class="banner-button vp-btn-primary" id="vp-hero-details">▶ Ver Detalles</button>
         <button type="button" class="banner-button vp-btn-ghost" id="vp-hero-add">＋ Mi Lista</button>
@@ -1019,13 +581,13 @@
     </div>
   </div>
 
-<!-- Catálogo de animes (se llena desde Firebase; oculto si no hay datos) -->
+<!-- Catálogo de animes (modo local; muestra estado vacío si no hay datos) -->
   <div class="carousel-container" id="vp-catalogo-wrap">
     <div class="carousel-title">Animes</div>
     <div class="carousel vp-rail" id="vp-catalogo"><p class="vp-empty">Cargando catálogo…</p></div>
   </div>
 
-  <!-- Carruseles por criterio (se llenan con datos reales del catálogo) -->
+  <!-- Carruseles por criterio (se llenan con el catálogo local) -->
   <div class="carousel-container">
     <div class="carousel-title">Emisi&oacute;n</div>
     <div class="carousel vp-rail" id="carousel-emision"></div>
@@ -1043,118 +605,19 @@
     <div class="carousel vp-rail" id="carousel-recomendados"></div>
   </div>
 
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <h2 id="modal-title"></h2>
-      <p id="modal-description"></p>
-      <p id="modal-year"></p>
-    </div>
-  </div>
 
-  <div id="vote-message" class="vote-animation"></div>
-
-  <!-- Agregar el SDK de Firebase -->
-  <script type="module">
-    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
-    // Tu configuración de Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
-      authDomain: "vetplex-animes.firebaseapp.com",
-      databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
-      projectId: "vetplex-animes",
-      storageBucket: "vetplex-animes.appspot.com",
-      messagingSenderId: "485618641909",
-      appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
-      measurementId: "G-3QGGL7CWQ0"
-    };
-
-    // Inicializar Firebase (una sola app compartida entre módulos)
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-    const auth = getAuth(app);
-    // UID real del usuario logueado (antes era "user123" fijo para todos)
-    const currentUid = () => (auth.currentUser && auth.currentUser.uid) || 'anon';
-
-    // Función para mostrar el modal
-    function showModal(title, description, year) {
-      document.getElementById("modal-title").innerText = title;
-      document.getElementById("modal-description").innerText = description;
-      document.getElementById("modal-year").innerText = year;
-      document.getElementById("modal").style.display = "flex";
-    }
-
-    // Función para cerrar el modal
-    function closeModal() {
-      document.getElementById("modal").style.display = "none";
-    }
-
-    // Función para agregar a la lista
-    function addToList(anime) {
-      push(ref(database, 'users/' + currentUid() + '/list'), {
-        name: anime,
-        added: true,
-        ts: Date.now()
-      }).then(() => {
-        var msg = anime + " añadido a tu lista.";
-        if (typeof window.vpToast === 'function') { window.vpToast(msg); }
-        else {
-          const el = document.getElementById("vote-message");
-          if (el) { el.textContent = msg; el.style.display = "block"; setTimeout(() => { el.style.display = "none"; }, 2000); }
-        }
-      });
-    }
-
-    // Función para buscar anime
-    function searchAnime() {
-      const input = document.getElementById("search-input").value;
-      // Lógica para buscar anime (puedes implementar esto según tus necesidades)
-      alert("Buscando anime: " + input);
-    }
-
-    // Los botones usan onclick="...": las funciones de un módulo no son
-    // globales, así que se exponen explícitamente en window.
-    window.showModal = showModal;
-    window.closeModal = closeModal;
-    window.addToList = addToList;
-    window.vote = vote;
-  </script>
 </body>
 </html>
 
 
    
   
-  <!-- Catalogo VetPlex: carga desde Firebase Realtime (/animes) con respaldo REST.
-       Reemplaza al antiguo documento embebido "Publicar Anime" (eliminado 2026-09-24):
-       la publicacion por usuarios, el reporte con Telegram y su modal ya no existen.
-       Este modulo conserva el cargador del catalogo, la busqueda real y los rieles. -->
+  <!-- Catalogo VetPlex: modo 100% local (sin backend).
+       El catalogo arranca vacio; las vistas muestran estados vacios elegantes.
+       Esquema de datos (futuro catalogo en AWS): title, year, category/type,
+       synopsis, imageUrl, videoUrl, trailerUrl, episodes[{n,title,videoUrl}], _key.
+       Este modulo conserva el pintado del catalogo, la busqueda local y los rieles. -->
   <script type="module">
-    import {
-      initializeApp,
-      getApps,
-      getApp
-    } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      onValue
-    } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
-      authDomain: "vetplex-animes.firebaseapp.com",
-      projectId: "vetplex-animes",
-      storageBucket: "vetplex-animes.appspot.com",
-      messagingSenderId: "485618641909",
-      appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
-      measurementId: "G-3QGGL7CWQ0",
-      databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
-    };
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const database = getDatabase(app);
     const catalogo = document.getElementById('vp-catalogo');
     const catalogoWrap = document.getElementById('vp-catalogo-wrap');
     const rails = {
@@ -1167,7 +630,7 @@
     const POSTER_FALLBACK = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450"><rect width="300" height="450" fill="#1a1d29"/><text x="150" y="225" fill="#8b93b8" font-family="sans-serif" font-size="22" text-anchor="middle">VetPlex</text></svg>'
     );
-    let catalogLoaded = false; // true cuando onValue o el respaldo REST ya pintaron el catalogo
+    let catalogLoaded = false; // true cuando el cargador local ya pinto el catalogo
     // Metricas reales del catalogo para ordenar los rieles
     function votesCount(anime) {
       const r = anime && anime.ratings;
@@ -1333,43 +796,12 @@
       }
       catalogLoaded = true;
     }
+    /* Catalogo local: arranca vacio. Esquema de datos (futuro catalogo en AWS):
+       { title, year, category/type, synopsis, imageUrl, videoUrl, trailerUrl,
+         episodes: [{ n, title, videoUrl }], _key }.
+       window.__vpAnimes expone el catalogo (ahora vacio). */
     function displayAnimes() {
-      catalogLoaded = false;
-      const animesRef = ref(database, 'animes');
-      onValue(animesRef, (snapshot) => {
-        const animes = [];
-        snapshot.forEach((childSnapshot) => {
-          const v = childSnapshot.val();
-          if (v) { v._key = childSnapshot.key; animes.push(v); }
-        });
-        renderAnimeList(animes);
-      }, (err) => {
-        // Si el respaldo REST ya pinto el catalogo, no pisarlo con el error
-        if (catalogLoaded) return;
-        if (catalogoWrap) {
-          catalogoWrap.hidden = false;
-          if (catalogo) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
-        }
-      });
-      // Respaldo: si onValue no responde en 10s (redes que bloquean el canal
-      // realtime de Firebase), cargar por REST directo y pintar el catalogo igual.
-      setTimeout(() => {
-        if (catalogLoaded) return;
-        fetch('https://vetplex-animes-default-rtdb.firebaseio.com/animes.json')
-          .then((r) => { if (!r.ok) throw new Error('REST ' + r.status); return r.json(); })
-          .then((data) => {
-            if (catalogLoaded || !data) return;
-            const arr = Object.entries(data).map(([k, v]) => { if (v) v._key = k; return v; }).filter(Boolean);
-            renderAnimeList(arr);
-          })
-          .catch(() => {
-            if (catalogLoaded) return;
-            if (catalogoWrap) {
-              catalogoWrap.hidden = false;
-              if (catalogo && !catalogo.children.length) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
-            }
-          });
-      }, 10000);
+      renderAnimeList([]);
     }
     // Busqueda de anime (filtra las tarjetas del catalogo y los rieles)
     function searchAnime() {
@@ -1559,71 +991,6 @@
         }
       }
     </style>
-    <script type="module">
-      // Importar las funciones necesarias de Firebase
-      import {
-        initializeApp,
-        getApps,
-        getApp
-      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-      import {
-        getDatabase,
-        ref,
-        set
-      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
-      // Configuración de Firebase
-      const firebaseConfig = {
-        apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
-        authDomain: "vetplex-animes.firebaseapp.com",
-        databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
-        projectId: "vetplex-animes",
-        storageBucket: "vetplex-animes.appspot.com",
-        messagingSenderId: "485618641909",
-        appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
-        measurementId: "G-3QGGL7CWQ0"
-      };
-      // Inicializar Firebase
-      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-      const database = getDatabase(app);
-      // Función para enviar el reporte a Firebase
-      function sendReport(problemType) {
-        const reportRef = ref(database, 'reports/' + Date.now());
-        set(reportRef, {
-          problemType: problemType,
-          timestamp: new Date().toISOString()
-        });
-      }
-      // Mostrar y ocultar la pantalla de bloqueo de notificación (todas las copias del bloque)
-      document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll('#shortcut').forEach(function(el) {
-          el.onclick = function() {
-            document.querySelectorAll('#notification-blocker').forEach(function(b) { b.style.display = 'flex'; });
-          };
-        });
-        document.querySelectorAll('#accept-btn').forEach(function(el) {
-          el.onclick = function() {
-            document.querySelectorAll('#notification-blocker').forEach(function(b) { b.style.display = 'none'; });
-          };
-        });
-        document.querySelectorAll('#report-btn').forEach(function(el) {
-          el.onclick = function() {
-            var block = el.closest('#notification-blocker');
-            var form = block ? block.querySelector('#report-form') : document.querySelector('#report-form');
-            if (form) form.style.display = 'block';
-          };
-        });
-        // Enviar el reporte a Firebase y mostrar advertencia (dentro de su propio bloque)
-        document.querySelectorAll('#submit-report').forEach(function(el) {
-          el.onclick = function() {
-            var block = el.closest('#notification-blocker');
-            var typeSel = block ? block.querySelector('#problem-type') : document.querySelector('#problem-type');
-            var warn = block ? block.querySelector('#warning-message') : document.querySelector('#warning-message');
-            if (typeSel) sendReport(typeSel.value);
-            if (warn) warn.style.display = 'block';
-          };
-        });
-      });
-    </script>
   </head>
 
   <body>
@@ -1824,31 +1191,7 @@
     <div class="carousel-container" id="vp-septiembre-wrap">
       <div class="carousel-title">Novedades de septiembre</div>
       <div class="carousel vp-rail" id="vp-rail-septiembre">
-        <article class="vp-card" data-info='{"title":"Sekiro: No Defeat","date":"4 de septiembre de 2026","year":"2026","type":"Película","category":"Película","synopsis":"En la era Sengoku, el shinobi Sekiro protege al Heredero Divino de las garras del clan Ashina. Película de 1 h 47 min basada en el videojuego.","imageUrl":"https://www.crank-in.net/img/db/262039177122072_1200.jpg"}'>
-          <img src="https://www.crank-in.net/img/db/262039177122072_1200.jpg" alt="Sekiro: No Defeat" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
-          <h3>Sekiro: No Defeat</h3>
-          <p>2026</p>
-        </article>
-        <article class="vp-card" data-info='{"title":"A Wild Last Boss Appeared! 2","date":"26 de septiembre de 2026","year":"2026","type":"Anime","category":"Anime","synopsis":"Preestreno en streaming el 26 de septiembre (TV desde el 3 de octubre). La overlord Lufas despierta de su sello de 200 años ante una nueva amenaza.","imageUrl":"https://miraianime.net/wp-content/uploads//Yasei-no-Last-Boss-ga-Arawareta-2-1468x2048.webp"}'>
-          <img src="https://miraianime.net/wp-content/uploads//Yasei-no-Last-Boss-ga-Arawareta-2-1468x2048.webp" alt="A Wild Last Boss Appeared! 2" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
-          <h3>A Wild Last Boss Appeared! 2</h3>
-          <p>2026</p>
-        </article>
-        <article class="vp-card" data-info='{"title":"Overgeared","date":"27 de septiembre de 2026","year":"2026","type":"Anime","category":"Anime","synopsis":"Preestreno en streaming el 27 de septiembre (TV desde el 2 de octubre). Shin Youngwoo, jugador mediocre del VRMMO Satisfy, obtiene el legendario libro de Pagma y se convierte en el herrero legendario Grid.","imageUrl":"https://static0.srcdn.com/wordpress/wp-content/uploads/2026/07/overgeared-anime-poster.png?q=49&fit=crop&w=750&dpr=2"}'>
-          <img src="https://static0.srcdn.com/wordpress/wp-content/uploads/2026/07/overgeared-anime-poster.png?q=49&amp;fit=crop&amp;w=750&amp;dpr=2" alt="Overgeared" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
-          <h3>Overgeared</h3>
-          <p>2026</p>
-        </article>
-        <article class="vp-card" data-info='{"title":"Tensei Kizoku: Appraisal Skill 3","date":"27 de septiembre de 2026","year":"2026","type":"Anime","category":"Anime","synopsis":"Ars Louvent sigue usando su habilidad de tasación para reunir talento y proteger su territorio en la tercera temporada.","imageUrl":"https://img.anmosugoi.com/file/media-sugoi/2024/12/Tensei-Kizoku-Kantei-Skill-de-Nariagaru-anime-visual-1086x1536.webp"}'>
-          <img src="https://img.anmosugoi.com/file/media-sugoi/2024/12/Tensei-Kizoku-Kantei-Skill-de-Nariagaru-anime-visual-1086x1536.webp" alt="Tensei Kizoku: Appraisal Skill 3" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
-          <h3>Tensei Kizoku: Appraisal Skill 3</h3>
-          <p>2026</p>
-        </article>
-        <article class="vp-card" data-info='{"title":"The Prince of Tennis II: U-17 World Cup Final","date":"30 de septiembre de 2026","year":"2026","type":"Anime","category":"Anime","synopsis":"La selección japonesa U-17 disputa el partido que definirá a los titulares rumbo a la final del Mundial. Estreno en TV Tokyo el 30 de septiembre.","imageUrl":"https://cho-animedia.jp/imgs/p/usvA95G_PvGjGchefBePwQTN9cDBwsPExcbH/1350484.jpg"}'>
-          <img src="https://cho-animedia.jp/imgs/p/usvA95G_PvGjGchefBePwQTN9cDBwsPExcbH/1350484.jpg" alt="The Prince of Tennis II: U-17 World Cup Final" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
-          <h3>The Prince of Tennis II: U-17 World Cup Final</h3>
-          <p>2026</p>
-        </article>
+        <p class="vp-empty">Próximamente.</p>
       </div>
     </div>
     <script>
@@ -2020,14 +1363,13 @@
       color: #ffffff !important; border: none !important; border-radius: 10px !important;
     }
     .close { color: var(--vp-accent) !important; }
-    /* ---------- Login / registro al azul Prime/Disney ---------- */
-    #overlay { --ax-accent: #00a8e1; --ax-accent-hi: #38c6f4; --ax-accent-deep: #0063e5; }
+    /* ---------- Login / registro (retirado: app 100% local, sin backend) ---------- */
     #switch-auth { color: var(--vp-accent) !important; }
   </style>
 <!-- ============================================================
      VetPlex App — navegación inferior + vistas (2026-09-24)
      Secciones: Inicio · Mi Lista · Calendario · Buscar + Detalle
-     estilo Disney+/Netflix. Sin cambios a Firebase ni al tema.
+     estilo Disney+/Netflix. App 100% local, sin backend.
      ============================================================ -->
 <style id="vp-app-tabs">
   /* La barra inferior no debe tapar contenido ni el atajo flotante */
@@ -2526,7 +1868,7 @@
            cat.filter(function (a) { return norm(a.title).indexOf(t) !== -1; })[0] || null;
   }
 
-  /* ---------- Mi Lista (local; Firebase se conserva vía addToList original) ---------- */
+  /* ---------- Mi Lista (local; sin backend) ---------- */
   var LIST_KEY = 'vp_milista_v1';
   function vpListGet() { return store.get(LIST_KEY, {}); }
   function vpListHas(key) { return !!vpListGet()[key]; }
@@ -2554,7 +1896,7 @@
   window.vpFindAnime = vpFindAnime;
 
   /* Envolver window.addToList (la define el módulo): guarda copia local
-     con póster y datos para la vista Mi Lista, sin tocar Firebase. */
+     con póster y datos para la vista Mi Lista (todo local). */
   var vpAddWrapped = false;
   function vpInstallAddToList() {
     if (vpAddWrapped) return;
@@ -2725,7 +2067,7 @@
 
   /* ============================================================
      Reproductor de video VetPlex + Seguir viendo
-     Contrato de datos (solo lectura; Firebase no se toca):
+     Contrato de datos (solo lectura, datos locales):
        Película : a.videoUrl                → mp4/m3u8 directo
        Episodio : a.episodes[i].videoUrl     (y .title opcional)
        Tráiler  : a.trailerUrl || a.trailer  (URL de YouTube, fallback embebido)
@@ -3066,7 +2408,7 @@
     if (hint) {
       hint.textContent = q
         ? (res.length ? res.length + ' resultado(s)' : 'Sin resultados para "' + (inp.value || '') + '"')
-        : (items.length ? 'Todo el catálogo · ' + items.length + ' títulos' : 'Cargando catálogo…');
+        : (items.length ? 'Todo el catálogo · ' + items.length + ' títulos' : 'El catálogo está vacío por ahora.');
     }
     res.forEach(function (a) { box.appendChild(vpCard(a)); });
     var clr = $('#vp-search-clear');
