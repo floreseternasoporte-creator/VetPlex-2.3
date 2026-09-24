@@ -1,398 +1,464 @@
 /* ==========================================================================
-   VETPLEX — Auth cinematográfico (auth-cinematic.css)
+   VETPLEX — Auth "Alexa x DeepSeek" (auth-cinematic.css)
    --------------------------------------------------------------------------
-   Diseño 100% ORIGINAL: no usa assets, logos ni marcas de terceros.
-   El wordmark VETPLEX rojo (#E50914) se conserva por decisión del usuario.
+   Rediseño 2026-09-24. Dirección de arte: azul noche profundo de Alexa
+   (#050B16) + anillo luminoso giratorio (cian -> azul) x minimalismo
+   DeepSeek: tipografía limpia, acento azul #4D6BFE, aire generoso.
 
-   INTEGRACIÓN: este archivo REEMPLAZA por completo el bloque <style> inline
-   del auth que hoy vive en el primer <head> del index.html (aprox. líneas
-   36–300, el que empieza con "/* ===== VetPlex Auth — pantalla completa").
-   No cargar ambos a la vez. Enlazar con:
-     <link rel="stylesheet" href="hidden_files/auth-cinematic.css">
+   Patrones UX de referencia (X/Twitter, Google, Amazon):
+   - Flujo en 2 pasos: identificador -> "Siguiente" -> contraseña.
+   - Etiquetas flotantes, una acción principal por pantalla.
+   - Chip con el correo + "Cambiar" en el paso 2 (sensación humana).
+   - Microcopy cálido en español, errores inline específicos.
+   - "Recuérdame", mostrar/ocultar contraseña, recuperación.
 
-   CORRECCIONES QUE SE CONSERVAN (2026-09-23, no revertir):
-   - #overlay con z-index 10000 y overflow hidden
-   - fondo (.vp-auth-bg) anclado dentro del overlay (position absolute)
-   - scroll interno SOLO en .vp-auth-scroll
-   - bloqueo de scroll del body mientras el auth está visible (lo hace el JS
-     con body.style.overflow='hidden'; este CSS añade el helper
-     body.vp-no-scroll por si el integrador prefiere clase)
-   - imágenes del fondo con loading="eager" (atributo en el HTML, ya existe)
-   - estilos oscuros para :-webkit-autofill
-   - color-scheme: dark en el overlay
+   INTEGRACIÓN: enlazar con <link rel="stylesheet"
+   href="hidden_files/auth-cinematic.css">. No cargar junto a otro CSS de auth.
+
+   IDs que el JS espera (no renombrar): #overlay, #auth-title, #auth-sub,
+   #login-form, #register-form, #login-step-1, #login-step-2, #register-step-1,
+   #register-step-2, #login-email, #login-password, #login-next, #login-back,
+   #login-button, #login-error, #login-error2, #register-email,
+   #register-password, #register-next, #register-back, #register-button,
+   #register-error, #register-error2, #login-chip-email, #login-chip-avatar,
+   #register-chip-email, #register-chip-avatar, #recover-box, #recover-email,
+   #recover-button, #recover-msg, #recover-back, #forgot-password,
+   #remember-me, #auth-switch-text, #switch-auth, .vp-pw-toggle, .vp-strength.
    ========================================================================== */
 
 /* ============================ 1. TOKENS ============================ */
 :root {
-  /* Marca (se conserva el wordmark rojo actual) */
-  --vp-auth-red:        #e50914;
-  --vp-auth-red-hover:  #f6121d;
-  --vp-auth-red-deep:   #b00710;
+  /* Alexa: noche profunda */
+  --ax-ink:          #050b16;
+  --ax-ink-2:        #081120;
+  --ax-panel:        #0a1424;
+  --ax-card:         rgba(13, 22, 38, 0.62);
+  --ax-card-line:    rgba(122, 162, 255, 0.14);
+  --ax-field:        #101b30;
+  --ax-field-hi:     #152238;
 
-  /* Superficies cinematográficas */
-  --vp-auth-ink:        #05070d;   /* negro azulado profundo */
-  --vp-auth-card:       rgba(11, 16, 27, 0.72);
-  --vp-auth-card-line:  rgba(255, 255, 255, 0.10);
-  --vp-auth-field:      #1a2333;
-  --vp-auth-field-hi:   #232e42;
+  /* Alexa ring: cian -> azul */
+  --ax-cyan:         #00d4ff;
+  --ax-ring-blue:    #2e6bff;
+  --ax-ring-violet:  #7a5cff;
+
+  /* DeepSeek: acento azul limpio */
+  --ax-accent:       #4d6bfe;
+  --ax-accent-hi:    #6b83ff;
+  --ax-accent-deep:  #3b53d6;
 
   /* Texto */
-  --vp-auth-text:       #ffffff;
-  --vp-auth-dim:        #b9c3d1;
-  --vp-auth-muted:      #8b95a6;
+  --ax-text:         #f4f7fc;
+  --ax-dim:          #a7b4c9;
+  --ax-muted:        #6e7d94;
 
   /* Semánticos */
-  --vp-auth-danger:     #e5484d;
-  --vp-auth-danger-bg:  rgba(229, 72, 77, 0.13);
-  --vp-auth-ok:         #3fb96b;
-  --vp-auth-warn:       #e8930c;
-  --vp-auth-amber:      #ff9e2c;   /* acento propio para foco/medidor */
+  --ax-danger:       #ff7a7a;
+  --ax-danger-bg:    rgba(255, 122, 122, 0.10);
+  --ax-ok:           #3ed598;
+  --ax-warn:         #ffb020;
 
   /* Forma y movimiento */
-  --vp-auth-radius:     16px;
-  --vp-auth-ease:       cubic-bezier(0.22, 0.9, 0.28, 1);
-  --vp-auth-shadow:     0 32px 90px rgba(0, 0, 0, 0.65);
-  --vp-auth-font:       "Helvetica Neue", Helvetica, Arial, system-ui,
-                        -apple-system, "Segoe UI", sans-serif;
+  --ax-radius:       18px;
+  --ax-ease:         cubic-bezier(0.22, 0.9, 0.28, 1);
+  --ax-font:         "Inter", "Helvetica Neue", Helvetica, Arial, system-ui,
+                     -apple-system, "Segoe UI", sans-serif;
 }
 
-/* ================= 2. OVERLAY (pantalla completa) ================= */
+/* ================= 2. OVERLAY (pantalla completa real) ================= */
 #overlay {
   position: fixed;
   inset: 0;
-  z-index: 10000;                 /* FIX: por encima del header del sitio */
+  z-index: 10000;
   display: flex;
-  flex-direction: column;
-  font-family: var(--vp-auth-font);
-  background: var(--vp-auth-ink);
-  overflow: hidden;               /* FIX: el overlay nunca hace scroll */
+  font-family: var(--ax-font);
+  background:
+    radial-gradient(1100px 600px at 12% -10%, rgba(46, 107, 255, 0.16), transparent 60%),
+    radial-gradient(900px 700px at 105% 110%, rgba(0, 212, 255, 0.10), transparent 60%),
+    linear-gradient(180deg, var(--ax-ink) 0%, var(--ax-ink-2) 100%);
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  color-scheme: dark;             /* FIX: controles nativos en modo oscuro */
-  color: var(--vp-auth-text);
+  color-scheme: dark;
+  color: var(--ax-text);
 }
 #overlay.vp-hidden { display: none; }
-
-/* Helper opcional para el bloqueo de scroll del body (el JS actual ya lo
-   hace con body.style.overflow='hidden'; se deja la clase como alternativa) */
 body.vp-no-scroll { overflow: hidden !important; }
 
-/* Resets contra los estilos globales heredados del HTML concatenado
-   (h1/h2 con animación textFly, input/button con estilos de Halloween, etc.) */
-#overlay h1, #overlay h2 {
-  animation: none;
-  color: var(--vp-auth-text);
-  text-shadow: none;
-  font-family: inherit;
-  margin: 0 0 10px;
-}
-#overlay button { animation: none; text-shadow: none; }
+/* Resets contra estilos globales heredados del HTML concatenado */
+#overlay h1, #overlay h2 { animation: none; text-shadow: none; margin: 0; font-family: inherit; }
+#overlay button { animation: none; text-shadow: none; font-family: inherit; }
+#overlay ul { margin: 0; padding: 0; list-style: none; }
 
-/* ============ 3. FONDO: collage cinematográfico de pósteres ============ */
-/* Reutiliza las <img loading="eager"> que ya existen en el HTML.
-   El fondo queda ANCLADO al overlay (absolute): nunca se mueve "solo",
-   ni siquiera en iOS. FIX conservado. */
-.vp-auth-bg {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
-  padding: 6px;
-  overflow: hidden;
-}
-.vp-auth-bg img {
+/* ================= 3. ESTRUCTURA SPLIT-SCREEN ================= */
+.ax-auth {
+  display: flex;
   width: 100%;
-  height: 100vh;
-  object-fit: cover;
-  filter: blur(7px) brightness(0.42) saturate(1.15);
-  transform: scale(1.08);
-  animation: vpKenBurns 30s ease-in-out infinite alternate; /* deriva lenta */
-  pointer-events: none;
-  user-select: none;
-}
-/* Desfase por columna para que la deriva no se vea sincronizada */
-.vp-auth-bg img:nth-child(8n+2) { animation-delay: -6s; }
-.vp-auth-bg img:nth-child(8n+4) { animation-delay: -12s; }
-.vp-auth-bg img:nth-child(8n+6) { animation-delay: -18s; }
-.vp-auth-bg img:nth-child(8n+8) { animation-delay: -24s; }
-
-@keyframes vpKenBurns {
-  from { transform: scale(1.08) translateY(0); }
-  to   { transform: scale(1.17) translateY(-1.5%); }
+  min-height: 100dvh;
 }
 
-/* Degradado oscuro cinematográfico: viñeta + bandas superior/inferior */
-.vp-auth-shade {
+/* ---- Panel de marca (izquierda, desktop) ---- */
+.ax-brand {
+  position: relative;
+  flex: 1.05;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(700px 500px at 30% 20%, rgba(46, 107, 255, 0.22), transparent 65%),
+    radial-gradient(600px 600px at 80% 85%, rgba(0, 212, 255, 0.12), transparent 60%),
+    linear-gradient(160deg, #0a1730 0%, #060d1c 70%);
+  border-right: 1px solid rgba(122, 162, 255, 0.10);
+}
+.ax-brand::after { /* viñeta sutil */
+  content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at center, rgba(0,0,0,0.18) 0%, rgba(5,7,13,0.82) 100%),
-    linear-gradient(to bottom,
-      rgba(5,7,13,0.72) 0%,
-      rgba(5,7,13,0.28) 26%,
-      rgba(5,7,13,0.42) 62%,
-      rgba(5,7,13,0.88) 100%);
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(3, 6, 12, 0.55) 100%);
+  pointer-events: none;
 }
-
-/* ============ 4. CONTENEDOR CON SCROLL INTERNO (FIX) ============ */
-/* Solo este contenedor hace scroll; el fondo queda fijo. */
-.vp-auth-scroll {
+.ax-brand-inner {
   position: relative;
   z-index: 1;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ================= 5. WORDMARK DENTRO DE LA TARJETA ================= */
-/* El overlay ya cubre todo el viewport (position:fixed, inset:0,
-   z-index:10000 por encima del header del sitio). La barra superior
-   separada se confundia con el encabezado del sitio, asi que la identidad
-   VETPLEX vive ahora dentro de la tarjeta de auth. */
-.vp-logo {
-  display: block;
-  position: relative;
-  z-index: 2;
   text-align: center;
-  color: var(--vp-auth-red);      /* wordmark rojo conservado */
-  font-size: 30px;
-  font-weight: 900;
-  letter-spacing: 6px;
-  line-height: 1;
-  user-select: none;
-  text-shadow: 0 2px 24px rgba(229, 9, 20, 0.35); /* halo propio, sutil */
-  margin: 0 0 20px;
+  padding: 48px;
+  max-width: 460px;
+  animation: axRise 0.7s var(--ax-ease) both;
 }
-
-/* ================= 6. TARJETA DE VIDRIO OSCURO ================= */
-#auth-container {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 440px;
-  margin: auto;
-  box-sizing: border-box;
-  padding: 48px 58px 38px;
-  border-radius: var(--vp-auth-radius);
-  background:
-    linear-gradient(160deg, rgba(20, 28, 45, 0.78), rgba(9, 13, 22, 0.82));
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid var(--vp-auth-card-line);
-  box-shadow: var(--vp-auth-shadow), inset 0 1px 0 rgba(255,255,255,0.08);
-  animation: vpCardIn 0.55s var(--vp-auth-ease) both;
-}
-@keyframes vpCardIn {
-  from { opacity: 0; transform: translateY(26px) scale(0.985); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.vp-auth-title { font-size: 31px; font-weight: 700; letter-spacing: 0.2px; }
-.vp-auth-sub   { color: var(--vp-auth-dim); font-size: 15px; margin: 0 0 26px; }
-
-/* Transición suave entre vistas (login / registro / recuperar):
-   el integrador añade .vp-view-enter al mostrar cada formulario. */
-.vp-view-enter { animation: vpViewIn 0.38s var(--vp-auth-ease) both; }
-@keyframes vpViewIn {
-  from { opacity: 0; transform: translateY(14px); }
+@keyframes axRise {
+  from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ================= 7. CAMPOS ================= */
-#overlay .vp-field { position: relative; margin-bottom: 14px; }
+/* ---- Anillo Alexa: aro cónico giratorio + halo ---- */
+.ax-ring {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  margin: 0 auto 30px;
+  border-radius: 50%;
+}
+.ax-ring::before { /* el aro */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--ax-cyan), var(--ax-ring-blue), var(--ax-ring-violet), var(--ax-cyan));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 11px), #000 calc(100% - 10px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 11px), #000 calc(100% - 10px));
+  animation: axSpin 7s linear infinite;
+}
+.ax-ring::after { /* halo */
+  content: "";
+  position: absolute;
+  inset: -26px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(46, 107, 255, 0.35) 0%, rgba(0, 212, 255, 0.12) 45%, transparent 70%);
+  filter: blur(10px);
+  animation: axPulse 4.5s ease-in-out infinite;
+}
+@keyframes axSpin { to { transform: rotate(360deg); } }
+@keyframes axPulse {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.06); }
+}
+
+.ax-wordmark {
+  display: block;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  text-indent: 8px;
+  text-shadow: 0 0 28px rgba(46, 107, 255, 0.55);
+  user-select: none;
+}
+.ax-tagline {
+  margin: 18px 0 34px;
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ax-text);
+}
+.ax-points li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto 16px;
+  max-width: 340px;
+  font-size: 14.5px;
+  color: var(--ax-dim);
+  text-align: left;
+}
+.ax-points li::before { /* check dibujado en CSS */
+  content: "";
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--ax-ok), var(--ax-ok)) center / 10px 2.5px no-repeat,
+    linear-gradient(var(--ax-ok), var(--ax-ok)) center / 2.5px 6px no-repeat,
+    rgba(62, 213, 152, 0.14);
+  transform: rotate(-45deg) translate(1px, -1px);
+  border: 1px solid rgba(62, 213, 152, 0.4);
+}
+.ax-fine {
+  position: absolute;
+  bottom: 22px;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ax-muted);
+}
+
+/* ---- Panel del formulario (derecha, desktop) ---- */
+.ax-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ax-card {
+  width: 100%;
+  max-width: 400px;
+  animation: axRise 0.6s var(--ax-ease) both;
+}
+.ax-mobile-brand { display: none; } /* solo móvil */
+
+.ax-title { font-size: 29px; font-weight: 700; letter-spacing: 0.2px; color: var(--ax-text); }
+.ax-sub   { margin: 10px 0 30px; font-size: 15px; color: var(--ax-dim); line-height: 1.55; }
+
+/* Transición entre pasos/vistas */
+.ax-step[hidden] { display: none; }
+.vp-view-enter { animation: axStepIn 0.38s var(--ax-ease) both; }
+@keyframes axStepIn {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ================= 4. CHIP DE CORREO (paso 2, toque humano) ================= */
+.ax-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 22px;
+  padding: 10px 14px 10px 10px;
+  background: rgba(77, 107, 254, 0.08);
+  border: 1px solid rgba(77, 107, 254, 0.28);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--ax-text);
+  font-size: 14.5px;
+  font-family: inherit;
+  text-align: left;
+  /* neutraliza el tema legacy global `button` (fuego/naranja) del documento */
+  animation: none;
+  text-shadow: none;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.35);
+  transition: background 0.2s, border-color 0.2s;
+}
+.ax-chip:hover { background: rgba(77, 107, 254, 0.14); border-color: rgba(77, 107, 254, 0.45); }
+.ax-chip:focus-visible { outline: 2px solid var(--ax-cyan); outline-offset: 2px; }
+.ax-chip-avatar {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ax-cyan), var(--ax-ring-blue));
+}
+.ax-chip-email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  text-align: left;
+}
+.ax-chip-change { font-size: 13px; font-weight: 600; color: var(--ax-accent-hi); }
+
+/* ================= 5. CAMPOS CON ETIQUETA FLOTANTE ================= */
+#overlay .vp-field { position: relative; margin-bottom: 16px; }
 #overlay .vp-field input {
   display: block;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
-  padding: 14px 16px;
-  font-size: 16px;                 /* 16px evita el zoom automático en iOS */
+  padding: 24px 16px 10px;   /* hueco arriba para la etiqueta */
+  font-size: 16px;           /* 16px evita el zoom automático en iOS */
   font-family: inherit;
-  color: var(--vp-auth-text);
-  background: var(--vp-auth-field);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-bottom: 2px solid transparent;
-  border-radius: 10px;
+  color: var(--ax-text);
+  background: var(--ax-field);
+  border: 1px solid rgba(122, 162, 255, 0.16);
+  border-radius: 12px;
   outline: none;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
   animation: none;
   text-shadow: none;
   box-shadow: none;
 }
-#overlay .vp-field input::placeholder { color: var(--vp-auth-muted); opacity: 1; }
-#overlay .vp-field input:hover { background: var(--vp-auth-field-hi); }
+#overlay .vp-field input:hover { background: var(--ax-field-hi); }
 #overlay .vp-field input:focus {
-  background: var(--vp-auth-field-hi);
-  border-bottom-color: var(--vp-auth-red);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  background: var(--ax-field-hi);
+  border-color: var(--ax-accent);
+  box-shadow: 0 0 0 3px rgba(77, 107, 254, 0.22);
 }
-#overlay .vp-field input:focus-visible {
-  outline: 2px solid var(--vp-auth-amber);
-  outline-offset: 2px;
-}
+#overlay .vp-field input:focus-visible { outline: none; }
 
-/* El gestor de contraseñas del navegador pinta los campos autocompletados
-   con sus propios colores: forzar el estilo oscuro VetPlex.
-   FIX 2026-09-23: el !important es obligatorio porque la hoja UA de Chrome
-   aplica su fondo de autofill con prioridad; sin el, el campo quedaba como
-   una caja negra total. Sombra de 1000px para cubrir cualquier alto. */
+/* Etiqueta flotante estilo X */
+#overlay .ax-float label {
+  position: absolute;
+  left: 16px;
+  top: 17px;
+  font-size: 16px;
+  color: var(--ax-muted);
+  pointer-events: none;
+  transition: top 0.18s var(--ax-ease), font-size 0.18s var(--ax-ease), color 0.18s;
+}
+#overlay .ax-float input:focus + label,
+#overlay .ax-float input:not(:placeholder-shown) + label {
+  top: 8px;
+  font-size: 12px;
+  color: var(--ax-accent-hi);
+}
+#overlay .ax-float input::placeholder { color: transparent; }
+
+/* Autofill oscuro (el !important vence la hoja UA de Chrome) */
 #overlay .vp-field input:-webkit-autofill,
 #overlay .vp-field input:-webkit-autofill:hover,
 #overlay .vp-field input:-webkit-autofill:focus,
 #overlay .vp-field input:-webkit-autofill:active {
   -webkit-text-fill-color: #fff !important;
-  -webkit-box-shadow: 0 0 0 1000px var(--vp-auth-field) inset !important;
-  box-shadow: 0 0 0 1000px var(--vp-auth-field) inset !important;
-  background-color: var(--vp-auth-field) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--ax-field) inset !important;
+  box-shadow: 0 0 0 1000px var(--ax-field) inset !important;
+  background-color: var(--ax-field) !important;
   caret-color: #fff;
   transition: background-color 9999s ease-in-out 0s;
 }
-
-/* ---- Recuperación: estado visual propio (título + subtítulo + regreso) ---- */
-.vp-recover-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #fff;
-  margin: 2px 0 6px;
-  text-align: center;
-}
-.vp-recover-sub {
-  font-size: 14px;
-  color: var(--vp-auth-muted);
-  margin: 0 0 14px;
-  text-align: center;
-}
-#overlay .vp-recover .vp-back {
-  margin-top: 12px;
+/* Con autofill la etiqueta también debe flotar */
+#overlay .ax-float input:-webkit-autofill + label {
+  top: 8px;
+  font-size: 12px;
+  color: var(--ax-accent-hi);
 }
 
-/* ---- Validación inline (mensajes en español, los pone el JS) ---- */
-#overlay .vp-field.is-invalid input {
-  border-color: rgba(229, 72, 77, 0.65);
-  border-bottom-color: var(--vp-auth-danger);
-  background: rgba(229, 72, 77, 0.07);
-}
-#overlay .vp-field.is-valid input {
-  border-bottom-color: var(--vp-auth-ok);
-}
+/* ---- Validación inline ---- */
+#overlay .vp-field.is-invalid input { border-color: rgba(255, 122, 122, 0.7); background: rgba(255, 122, 122, 0.06); }
+#overlay .vp-field.is-valid input { border-color: rgba(62, 213, 152, 0.55); }
 .vp-hint {
   display: none;
   margin: 7px 2px 0;
   font-size: 12.5px;
   line-height: 1.45;
-  color: #ff9aa0;
+  color: #ffa3a3;
 }
 #overlay .vp-field.is-invalid .vp-hint { display: block; }
 
-/* ---- Mostrar / ocultar contraseña (botón con ojo dibujado en CSS) ---- */
-/* El integrador envuelve el input en .vp-field.has-toggle y añade el botón
-   .vp-view-toggle. Ver design_spec.md para el snippet exacto. */
-#overlay .vp-field.has-toggle input { padding-right: 50px; }
+/* ---- Mostrar / ocultar contraseña (ojo en CSS) ---- */
+#overlay .vp-field.has-toggle input { padding-right: 52px; }
 #overlay .vp-pw-toggle {
   position: absolute;
   right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
+  top: 16px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   box-shadow: none;
+  animation: none;      /* neutraliza el tema legacy global `button` */
+  text-shadow: none;
 }
-#overlay .vp-pw-toggle:hover { background: rgba(255,255,255,0.08); }
-#overlay .vp-pw-toggle:focus-visible { outline: 2px solid var(--vp-auth-amber); outline-offset: 1px; }
-/* Ojo: elipse + pupila */
+#overlay .vp-pw-toggle:hover { background: rgba(255, 255, 255, 0.08); }
+#overlay .vp-pw-toggle:focus-visible { outline: 2px solid var(--ax-accent-hi); outline-offset: 1px; }
 #overlay .vp-pw-toggle::before {
   content: "";
   position: absolute;
-  left: 7px; top: 12px;
+  left: 8px; top: 13px;
   width: 20px; height: 11px;
-  border: 2px solid var(--vp-auth-dim);
+  border: 2px solid var(--ax-dim);
   border-radius: 50%;
   box-sizing: border-box;
 }
 #overlay .vp-pw-toggle::after {
   content: "";
   position: absolute;
-  left: 14.5px; top: 14.5px;
+  left: 15.5px; top: 15.5px;
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: var(--vp-auth-dim);
+  background: var(--ax-dim);
 }
-/* Estado "oculto": diagonal tachando el ojo */
 #overlay .vp-pw-toggle.is-off i {
   position: absolute;
-  left: 6px; top: 16px;
+  left: 7px; top: 17px;
   width: 22px; height: 2px;
-  background: var(--vp-auth-danger);
+  background: var(--ax-danger);
   transform: rotate(-32deg);
   border-radius: 2px;
 }
-#overlay .vp-pw-toggle.is-off::before { border-color: var(--vp-auth-muted); }
-#overlay .vp-pw-toggle.is-off::after { background: var(--vp-auth-muted); }
+#overlay .vp-pw-toggle.is-off::before { border-color: var(--ax-muted); }
+#overlay .vp-pw-toggle.is-off::after { background: var(--ax-muted); }
 
-/* ---- Medidor de fuerza de contraseña ---- */
-/* El integrador lo coloca tras el campo de registro. Ver spec. */
-.vp-strength { margin: -4px 2px 14px; }
+/* ---- Medidor de fuerza ---- */
+.vp-strength { margin: -6px 2px 16px; }
 .vp-strength-bar { display: flex; gap: 6px; margin-bottom: 6px; }
 .vp-strength-bar span {
   flex: 1;
   height: 4px;
   border-radius: 4px;
-  background: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.14);
   transition: background 0.25s;
 }
-.vp-strength-label { margin: 0; font-size: 12.5px; color: var(--vp-auth-muted); }
-.vp-strength[data-level="1"] .vp-strength-bar span:nth-child(-n+1),
-.vp-strength[data-level="2"] .vp-strength-bar span:nth-child(-n+2),
-.vp-strength[data-level="3"] .vp-strength-bar span:nth-child(-n+3),
-.vp-strength[data-level="4"] .vp-strength-bar span:nth-child(-n+4) {
-  background: var(--vp-auth-danger);
-}
-.vp-strength[data-level="2"] .vp-strength-bar span:nth-child(-n+2) { background: var(--vp-auth-warn); }
-.vp-strength[data-level="3"] .vp-strength-bar span:nth-child(-n+3) { background: var(--vp-auth-amber); }
-.vp-strength[data-level="4"] .vp-strength-bar span:nth-child(-n+4) { background: var(--vp-auth-ok); }
+.vp-strength-label { margin: 0; font-size: 12.5px; color: var(--ax-muted); }
+.vp-strength[data-level="1"] .vp-strength-bar span:nth-child(-n+1) { background: var(--ax-danger); }
+.vp-strength[data-level="2"] .vp-strength-bar span:nth-child(-n+2) { background: var(--ax-warn); }
+.vp-strength[data-level="3"] .vp-strength-bar span:nth-child(-n+3) { background: var(--ax-cyan); }
+.vp-strength[data-level="4"] .vp-strength-bar span:nth-child(-n+4) { background: var(--ax-ok); }
 
-/* ================= 8. BOTONES ================= */
+/* ================= 6. BOTONES ================= */
 #overlay .vp-btn-primary {
   position: relative;
   display: block;
   width: 100%;
   box-sizing: border-box;
-  margin: 26px 0 0;
-  padding: 14px;
+  margin: 8px 0 0;
+  padding: 15px;
   font-size: 16px;
   font-weight: 700;
-  font-family: inherit;
   color: #fff;
-  background: linear-gradient(180deg, var(--vp-auth-red-hover), var(--vp-auth-red) 60%, var(--vp-auth-red-deep));
+  background: linear-gradient(180deg, var(--ax-accent-hi), var(--ax-accent) 55%, var(--ax-accent-deep));
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;   /* píldora estilo X */
   cursor: pointer;
   transition: filter 0.2s, transform 0.12s;
   animation: none;
   text-shadow: none;
-  box-shadow: 0 10px 28px rgba(229, 9, 20, 0.35);
+  box-shadow: 0 12px 30px rgba(77, 107, 254, 0.35);
 }
-#overlay .vp-btn-primary:hover { filter: brightness(1.1); }
+#overlay .vp-btn-primary:hover { filter: brightness(1.12); }
 #overlay .vp-btn-primary:active { transform: scale(0.985); }
-#overlay .vp-btn-primary:focus-visible { outline: 2px solid var(--vp-auth-amber); outline-offset: 2px; }
-#overlay .vp-btn-primary:disabled { filter: grayscale(0.6) brightness(0.7); cursor: default; box-shadow: none; }
+#overlay .vp-btn-primary:focus-visible { outline: 2px solid var(--ax-cyan); outline-offset: 3px; }
+#overlay .vp-btn-primary:disabled { filter: grayscale(0.5) brightness(0.75); cursor: default; box-shadow: none; }
 
-/* Estado de carga: spinner + texto oculto, botón bloqueado */
-#overlay .vp-btn-primary.is-loading {
-  color: transparent;
-  pointer-events: none;
-  filter: brightness(0.85);
-}
+/* Estado de carga: spinner + texto oculto */
+#overlay .vp-btn-primary.is-loading { color: transparent; pointer-events: none; filter: brightness(0.9); }
 #overlay .vp-btn-primary.is-loading::after {
   content: "";
   position: absolute;
@@ -400,57 +466,50 @@ body.vp-no-scroll { overflow: hidden !important; }
   width: 20px; height: 20px;
   margin: -10px 0 0 -10px;
   border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.35);
+  border: 3px solid rgba(255, 255, 255, 0.35);
   border-top-color: #fff;
-  animation: vpSpin 0.7s linear infinite;
+  animation: axSpinBtn 0.7s linear infinite;
 }
-@keyframes vpSpin { to { transform: rotate(360deg); } }
+@keyframes axSpinBtn { to { transform: rotate(360deg); } }
 
 #overlay .vp-btn-ghost {
   display: block;
   width: 100%;
   box-sizing: border-box;
   margin-top: 10px;
-  padding: 12px;
-  font-size: 14px;
+  padding: 13px;
+  font-size: 14.5px;
   font-weight: 600;
-  font-family: inherit;
   color: #fff;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.28);
-  border-radius: 10px;
+  background: rgba(77, 107, 254, 0.08);
+  border: 1px solid rgba(122, 162, 255, 0.35);
+  border-radius: 999px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
   animation: none;
   text-shadow: none;
   box-shadow: none;
 }
-#overlay .vp-btn-ghost:hover { border-color: #fff; background: rgba(255,255,255,0.09); }
-#overlay .vp-btn-ghost:focus-visible { outline: 2px solid var(--vp-auth-amber); outline-offset: 2px; }
+#overlay .vp-btn-ghost:hover { background: rgba(77, 107, 254, 0.16); border-color: var(--ax-accent-hi); }
+#overlay .vp-btn-ghost:focus-visible { outline: 2px solid var(--ax-cyan); outline-offset: 3px; }
 
-/* ================= 9. OPCIONES, ENLACES, TEXTOS ================= */
+/* ================= 7. OPCIONES, ENLACES, TEXTOS ================= */
 .vp-opts {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
-  font-size: 13px;
-  color: var(--vp-auth-dim);
+  margin-top: 18px;
+  font-size: 13.5px;
+  color: var(--ax-dim);
 }
-.vp-remember { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+.vp-remember { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 #overlay .vp-remember input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   margin: 0;
-  padding: 0;
-  display: inline-block;
-  border: none;
-  background: none;
-  border-radius: 0;
-  animation: none;
-  box-shadow: none;
-  accent-color: var(--vp-auth-red);
+  accent-color: var(--ax-accent);
+  cursor: pointer;
 }
 
 #overlay .vp-link {
@@ -458,103 +517,98 @@ body.vp-no-scroll { overflow: hidden !important; }
   border: none;
   padding: 0;
   width: auto;
-  color: var(--vp-auth-dim);
-  font-size: 13px;
-  font-family: inherit;
+  color: var(--ax-dim);
+  font-size: 13.5px;
   cursor: pointer;
   animation: none;
   text-shadow: none;
   box-shadow: none;
   text-decoration: none;
 }
-#overlay .vp-link:hover { text-decoration: underline; color: #fff; background: none; box-shadow: none; }
-#overlay .vp-link:focus-visible { outline: 2px solid var(--vp-auth-amber); outline-offset: 2px; border-radius: 4px; }
+#overlay .vp-link:hover { color: var(--ax-accent-hi); text-decoration: underline; background: none; box-shadow: none; }
+#overlay .vp-link:focus-visible { outline: 2px solid var(--ax-cyan); outline-offset: 2px; border-radius: 4px; }
 
-/* ---- Mensajes de error claros (el JS alterna .visible) ---- */
+/* ---- Errores claros ---- */
 .vp-error {
   display: none;
   position: relative;
-  margin: 0 0 14px;
-  padding: 12px 14px 12px 40px;
-  background: var(--vp-auth-danger-bg);
-  border: 1px solid rgba(229, 72, 77, 0.55);
-  border-left: 3px solid var(--vp-auth-danger);
-  color: #ffd9db;
+  margin: 0 0 16px;
+  padding: 12px 14px 12px 42px;
+  background: var(--ax-danger-bg);
+  border: 1px solid rgba(255, 122, 122, 0.4);
+  color: #ffc9c9;
   font-size: 14px;
-  border-radius: 8px;
-  line-height: 1.45;
-  animation: vpViewIn 0.3s var(--vp-auth-ease) both;
+  border-radius: 12px;
+  line-height: 1.5;
+  animation: axStepIn 0.3s var(--ax-ease) both;
 }
 .vp-error.visible { display: block; }
 .vp-error::before {
   content: "!";
   position: absolute;
-  left: 13px; top: 11px;
+  left: 14px; top: 12px;
   width: 18px; height: 18px;
   border-radius: 50%;
-  background: var(--vp-auth-danger);
-  color: #fff;
+  background: var(--ax-danger);
+  color: #2a0d0d;
   font-size: 12px;
   font-weight: 800;
   line-height: 18px;
   text-align: center;
 }
 
-.vp-note { font-size: 13px; color: var(--vp-auth-dim); margin: 10px 0 0; line-height: 1.55; }
-.vp-note.ok { color: var(--vp-auth-ok); }
+.vp-note { font-size: 13px; color: var(--ax-dim); margin: 12px 0 0; line-height: 1.6; text-align: center; }
+.vp-note.ok { color: var(--ax-ok); }
 
-.vp-recover { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.10); }
+.vp-recover { margin-top: 4px; }
+.vp-recover-sub { font-size: 14px; color: var(--ax-dim); margin: 0 0 18px; line-height: 1.55; }
+#overlay .vp-recover .vp-back { margin-top: 14px; }
 
-.vp-switch { margin: 32px 0 0; color: var(--vp-auth-muted); font-size: 15.5px; line-height: 1.5; }
+.vp-switch { margin: 30px 0 0; color: var(--ax-muted); font-size: 14.5px; line-height: 1.6; text-align: center; }
 #overlay .vp-link-strong {
   background: none;
   border: none;
   padding: 0;
   width: auto;
-  color: #fff;
-  font-size: 15.5px;
+  color: var(--ax-accent-hi);
+  font-size: 14.5px;
   font-weight: 700;
-  font-family: inherit;
   cursor: pointer;
   animation: none;
   text-shadow: none;
   box-shadow: none;
 }
 #overlay .vp-link-strong:hover { text-decoration: underline; background: none; box-shadow: none; }
-#overlay .vp-link-strong:focus-visible { outline: 2px solid var(--vp-auth-amber); outline-offset: 2px; border-radius: 4px; }
+#overlay .vp-link-strong:focus-visible { outline: 2px solid var(--ax-cyan); outline-offset: 2px; border-radius: 4px; }
 
-.vp-captcha { margin: 16px 0 0; color: var(--vp-auth-muted); font-size: 12.5px; line-height: 1.65; }
-.vp-captcha .vp-link { font-size: 12.5px; color: #6ea8ff; }
-
-/* ================= 10. MÓVIL (iPhone 390px, premium) ================= */
-@media (max-width: 600px) {
-  .vp-logo { font-size: 24px; letter-spacing: 4px; margin-bottom: 16px; }
-  .vp-auth-bg { grid-template-columns: repeat(4, 1fr); }
-  #auth-container {
-    padding: calc(30px + env(safe-area-inset-top)) 22px calc(30px + env(safe-area-inset-bottom));
-    margin: 0;
-    max-width: none;
-    min-height: calc(100dvh - 56px);
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    background: rgba(6, 9, 16, 0.9);
-    box-shadow: none;
+/* ================= 8. MÓVIL ================= */
+@media (max-width: 959px) {
+  .ax-brand { display: none; }
+  .ax-panel { padding: calc(28px + env(safe-area-inset-top)) 22px calc(32px + env(safe-area-inset-bottom)); align-items: flex-start; }
+  .ax-card { max-width: 420px; margin: 0 auto; }
+  .ax-mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
   }
-  .vp-auth-title { font-size: 25px; }
-  .vp-auth-sub { font-size: 14px; margin-bottom: 22px; }
-  #overlay .vp-field input { padding: 15px 16px; } /* 16px: sin zoom en iOS */
-  #overlay .vp-btn-primary { padding: 15px; }
-  .vp-switch { margin-top: 26px; }
+  .ax-mobile-brand .ax-ring { width: 42px; height: 42px; margin: 0; }
+  .ax-mobile-brand .ax-ring::before {
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  }
+  .ax-mobile-brand .ax-ring::after { inset: -8px; }
+  .ax-mobile-brand .ax-wordmark { font-size: 19px; letter-spacing: 5px; }
+  .ax-title { font-size: 25px; }
 }
 
-/* ================= 11. MOVIMIENTO REDUCIDO ================= */
+/* ================= 9. MOVIMIENTO REDUCIDO ================= */
 @media (prefers-reduced-motion: reduce) {
   #overlay *, #overlay *::before, #overlay *::after {
     animation-duration: 0.001s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001s !important;
   }
-  .vp-auth-bg img { animation: none; transform: scale(1.08); }
-  #auth-container { animation: none; }
+  .ax-ring::before { animation: none; }
+  .ax-ring::after { animation: none; opacity: 0.8; }
 }

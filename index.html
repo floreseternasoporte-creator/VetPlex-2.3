@@ -158,15 +158,31 @@
     const switchText = document.getElementById('auth-switch-text');
     const switchBtn = document.getElementById('switch-auth');
     const loginError = document.getElementById('login-error');
+    const loginError2 = document.getElementById('login-error2');
     const registerError = document.getElementById('register-error');
+    const registerError2 = document.getElementById('register-error2');
     const recoverBox = document.getElementById('recover-box');
     const recoverMsg = document.getElementById('recover-msg');
     const rememberMe = document.getElementById('remember-me');
     const strengthBox = document.querySelector('#register-form .vp-strength');
     const strengthLabel = document.querySelector('#register-form .vp-strength-label');
+    /* Pasos del flujo en 2 pasos (estilo X/Google): identificador -> contraseña */
+    const loginStep1 = document.getElementById('login-step-1');
+    const loginStep2 = document.getElementById('login-step-2');
+    const registerStep1 = document.getElementById('register-step-1');
+    const registerStep2 = document.getElementById('register-step-2');
 
     const showAuth = () => { overlay.classList.remove('vp-hidden'); document.body.style.overflow = 'hidden'; };
-    const hideAuth = () => { overlay.classList.add('vp-hidden'); document.body.style.overflow = ''; document.getElementById('login-password').value = ''; document.getElementById('register-password').value = ''; };
+    const hideAuth = () => {
+      overlay.classList.add('vp-hidden');
+      document.body.style.overflow = '';
+      document.getElementById('login-password').value = '';
+      document.getElementById('register-password').value = '';
+      /* al cerrar, todo vuelve al paso 1 para la próxima vez */
+      loginStep1.hidden = false; loginStep2.hidden = true;
+      registerStep1.hidden = false; registerStep2.hidden = true;
+      recoverBox.hidden = true;
+    };
 
     const friendlyError = (error) => {
       switch (error && error.code) {
@@ -210,36 +226,59 @@
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isValidEmail = (email) => EMAIL_RE.test(email);
 
-    /* Transición de vista: fade + desplazamiento al mostrar un formulario */
+    /* Transición de vista: desplazamiento lateral suave al cambiar de paso */
     const enterView = (el) => {
       el.classList.remove('vp-view-enter');
       void el.offsetWidth; /* reflow para relanzar la animación */
       el.classList.add('vp-view-enter');
     };
 
+    /* Foco automático solo con puntero fino: en móvil no se abre el teclado solo */
+    const focusFine = (el) => {
+      if (el && window.matchMedia && window.matchMedia('(pointer:fine)').matches) {
+        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+      }
+    };
+
+    /* Chip del paso 2: avatar con inicial + correo (toque humano) */
+    const fillChip = (email, avatarEl, emailEl) => {
+      emailEl.textContent = email;
+      avatarEl.textContent = (email.trim().charAt(0) || '?').toUpperCase();
+    };
+
+    const goStep = (s1, s2, first) => {
+      s1.hidden = !first;
+      s2.hidden = first;
+      enterView(first ? s1 : s2);
+    };
+
     const showLogin = () => {
       loginBox.style.display = 'block';
       registerBox.style.display = 'none';
-      authTitle.textContent = 'Iniciar sesión';
-      authSub.textContent = 'Tus animes favoritos te esperan.';
+      authTitle.textContent = 'Te damos la bienvenida';
+      authSub.textContent = 'Inicia sesión para continuar a VetPlex.';
       switchText.textContent = '¿Primera vez en VetPlex?';
-      switchBtn.textContent = 'Regístrate ahora.';
+      switchBtn.textContent = 'Crea tu cuenta';
       clearError(loginError);
+      clearError(loginError2);
       recoverBox.hidden = true;
       recoverMsg.textContent = '';
       recoverMsg.classList.remove('ok');
-      enterView(loginBox);
+      goStep(loginStep1, loginStep2, true);
+      focusFine(document.getElementById('login-email'));
     };
 
     const showRegister = () => {
       loginBox.style.display = 'none';
       registerBox.style.display = 'block';
-      authTitle.textContent = 'Regístrate';
-      authSub.textContent = 'Crea tu cuenta gratis y empieza a ver anime.';
+      authTitle.textContent = 'Crea tu cuenta';
+      authSub.textContent = 'Gratis, en menos de un minuto.';
       switchText.textContent = '¿Ya tienes cuenta?';
-      switchBtn.textContent = 'Inicia sesión.';
+      switchBtn.textContent = 'Inicia sesión';
       clearError(registerError);
-      enterView(registerBox);
+      clearError(registerError2);
+      goStep(registerStep1, registerStep2, true);
+      focusFine(document.getElementById('register-email'));
     };
 
     let registering = false;
@@ -258,68 +297,91 @@
       btn.classList.toggle('is-loading', loading);
     };
 
+    /* Validación del correo (paso 1, común a login y registro) */
+    const validateEmailStep = (inputId, errorEl) => {
+      const email = document.getElementById(inputId).value.trim();
+      clearError(errorEl);
+      clearFieldState(inputId);
+      if (!email) { setFieldState(inputId, false, 'Escribe tu correo electrónico.'); return null; }
+      if (!isValidEmail(email)) { setFieldState(inputId, false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); return null; }
+      setFieldState(inputId, true, '');
+      return email;
+    };
+
+    document.getElementById('login-next').addEventListener('click', () => {
+      const email = validateEmailStep('login-email', loginError);
+      if (!email) return;
+      fillChip(email, document.getElementById('login-chip-avatar'), document.getElementById('login-chip-email'));
+      goStep(loginStep1, loginStep2, false);
+      focusFine(document.getElementById('login-password'));
+    });
+    document.getElementById('login-back').addEventListener('click', () => {
+      goStep(loginStep1, loginStep2, true);
+      focusFine(document.getElementById('login-email'));
+    });
+
     document.getElementById('login-button').addEventListener('click', () => {
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
       const btn = document.getElementById('login-button');
-      clearError(loginError);
-      clearFieldState('login-email');
+      clearError(loginError2);
       clearFieldState('login-password');
-      let ok = true;
-      if (!email) { setFieldState('login-email', false, 'Escribe tu correo electrónico.'); ok = false; }
-      else if (!isValidEmail(email)) { setFieldState('login-email', false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); ok = false; }
-      else { setFieldState('login-email', true, ''); }
-      if (!password) { setFieldState('login-password', false, 'Escribe tu contraseña.'); ok = false; }
-      else { setFieldState('login-password', true, ''); }
-      if (!ok) return;
+      if (!password) { setFieldState('login-password', false, 'Escribe tu contraseña.'); return; }
+      setFieldState('login-password', true, '');
       setLoading(btn, true);
       /* "Recuérdame": persistencia local (sesión recordada) o solo de la sesión actual */
       setPersistence(auth, rememberMe.checked ? browserLocalPersistence : browserSessionPersistence)
         .then(() => signInWithEmailAndPassword(auth, email, password))
         .then(() => { hideAuth(); })
-        .catch((error) => { showError(loginError, friendlyError(error)); })
+        .catch((error) => { showError(loginError2, friendlyError(error)); })
         .finally(() => { setLoading(btn, false); });
+    });
+
+    document.getElementById('register-next').addEventListener('click', () => {
+      const email = validateEmailStep('register-email', registerError);
+      if (!email) return;
+      fillChip(email, document.getElementById('register-chip-avatar'), document.getElementById('register-chip-email'));
+      goStep(registerStep1, registerStep2, false);
+      focusFine(document.getElementById('register-password'));
+    });
+    document.getElementById('register-back').addEventListener('click', () => {
+      goStep(registerStep1, registerStep2, true);
+      focusFine(document.getElementById('register-email'));
     });
 
     document.getElementById('register-button').addEventListener('click', () => {
       const email = document.getElementById('register-email').value.trim();
       const password = document.getElementById('register-password').value;
       const btn = document.getElementById('register-button');
-      clearError(registerError);
-      clearFieldState('register-email');
+      clearError(registerError2);
       clearFieldState('register-password');
-      let ok = true;
-      if (!email) { setFieldState('register-email', false, 'Escribe tu correo electrónico.'); ok = false; }
-      else if (!isValidEmail(email)) { setFieldState('register-email', false, 'Ese correo no parece válido. Revísalo e inténtalo de nuevo.'); ok = false; }
-      else { setFieldState('register-email', true, ''); }
-      if (!password) { setFieldState('register-password', false, 'Escribe tu contraseña.'); ok = false; }
-      else if (password.length < 6) { setFieldState('register-password', false, 'La contraseña debe tener al menos 6 caracteres.'); ok = false; }
-      else { setFieldState('register-password', true, ''); }
-      if (!ok) return;
+      if (!password) { setFieldState('register-password', false, 'Crea una contraseña.'); return; }
+      if (password.length < 6) { setFieldState('register-password', false, 'La contraseña debe tener al menos 6 caracteres.'); return; }
+      setFieldState('register-password', true, '');
       setLoading(btn, true);
       createUserWithEmailAndPassword(auth, email, password)
         .then(() => sendEmailVerification(auth.currentUser))
         .then(() => { hideAuth(); })
-        .catch((error) => { showError(registerError, friendlyError(error)); })
+        .catch((error) => { showError(registerError2, friendlyError(error)); })
         .finally(() => { setLoading(btn, false); });
     });
 
-    /* Recuperación: estado visual propio (título + subtítulo + regreso).
+    /* Recuperación: oculta los pasos y muestra su propia vista.
        La lógica Firebase (sendPasswordResetEmail) no se toca. */
     const showRecover = () => {
+      loginStep1.hidden = true;
+      loginStep2.hidden = true;
       recoverBox.hidden = false;
       authTitle.textContent = 'Recupera tu contraseña';
       authSub.textContent = 'Te enviamos un enlace para restablecerla.';
       recoverMsg.textContent = '';
       recoverMsg.classList.remove('ok');
       enterView(recoverBox);
+      focusFine(document.getElementById('recover-email'));
     };
     const hideRecover = () => {
       recoverBox.hidden = true;
-      authTitle.textContent = 'Iniciar sesión';
-      authSub.textContent = 'Tus animes favoritos te esperan.';
-      recoverMsg.textContent = '';
-      recoverMsg.classList.remove('ok');
+      showLogin();
     };
     document.getElementById('forgot-password').addEventListener('click', () => {
       if (recoverBox.hidden) { showRecover(); } else { hideRecover(); }
@@ -359,7 +421,7 @@
         .finally(() => { setLoading(btn, false); });
     });
 
-    const enterPairs = [['login-email', 'login-button'], ['login-password', 'login-button'], ['register-email', 'register-button'], ['register-password', 'register-button'], ['recover-email', 'recover-button']];
+    const enterPairs = [['login-email', 'login-next'], ['login-password', 'login-button'], ['register-email', 'register-next'], ['register-password', 'register-button'], ['recover-email', 'recover-button']];
     enterPairs.forEach((pair) => {
       document.getElementById(pair[0]).addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { document.getElementById(pair[1]).click(); }
@@ -396,80 +458,112 @@
     });
 
     showLogin();
+
   </script>
 </head>
 
 <body>
   <div id="overlay">
-    <div class="vp-auth-bg" aria-hidden="true">
-      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/01ec367b44f0a568430a957e042639af.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/0a34f193aa46a27cd75f5ee553834c41.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/18638d44e180fd1b51870106b88e46e4.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/3b70d9f3c112faa30940bcc26f1cff98.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=480,height=720/catalog/crunchyroll/6533e54a54f7a69c806920607bc8238e.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://images.justwatch.com/poster/261483319/s718/boku-no-hero-academy.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://m.media-amazon.com/images/M/MV5BNzEzZjljMzAtNjJmMi00MTg3LTg1MDEtYWRiZWE4MjNlZTZlXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="" loading="eager" fetchpriority="high">
-      <img src="https://m.media-amazon.com/images/M/MV5BOTBhOTlkNDctMDg1Zi00MGViLWJhMTUtMTU1OWEyYTUzZjdhXkEyXkFqcGdeQXVyNzAwMjU2MTY@._V1_FMjpg_UX1000_.jpg" alt="" loading="eager" fetchpriority="high">
-      <div class="vp-auth-shade"></div>
-    </div>
-    <div class="vp-auth-scroll">
-    <div id="auth-container">
-      <!-- FIX: wordmark dentro de la tarjeta. La barra superior separada
-           (.vp-auth-top) se confundia visualmente con el encabezado del sitio;
-           el overlay ya cubre todo el viewport (fixed, inset:0, z-index:10000). -->
-      <span class="vp-logo">VETPLEX</span>
-      <h1 class="vp-auth-title" id="auth-title">Iniciar sesi&oacute;n</h1>
-      <p class="vp-auth-sub" id="auth-sub">Tus animes favoritos te esperan.</p>
-
-      <div id="login-form">
-        <div class="vp-field">
-          <input type="email" id="login-email" placeholder="Correo electr&oacute;nico" autocomplete="email" maxlength="254">
-          <p class="vp-hint"></p>
+    <div class="ax-auth">
+      <aside class="ax-brand">
+        <div class="ax-brand-inner">
+          <div class="ax-ring" aria-hidden="true"></div>
+          <span class="ax-wordmark">VETPLEX</span>
+          <h2 class="ax-tagline">Tu universo anime,<br>en un solo lugar.</h2>
+          <ul class="ax-points">
+            <li>Miles de animes, siempre a tu alcance</li>
+            <li>Tu lista y tu progreso en todos tus dispositivos</li>
+            <li>Gratis. Sin complicaciones.</li>
+          </ul>
         </div>
-        <div class="vp-field has-toggle">
-          <input type="password" id="login-password" placeholder="Contrase&ntilde;a" autocomplete="current-password" maxlength="128">
-          <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
-          <p class="vp-hint"></p>
-        </div>
-        <p class="vp-error" id="login-error" role="alert"></p>
-        <button type="button" id="login-button" class="vp-btn-primary">Iniciar sesi&oacute;n</button>
-        <div class="vp-opts">
-          <label class="vp-remember"><input type="checkbox" id="remember-me" checked> Recu&eacute;rdame</label>
-          <button type="button" id="forgot-password" class="vp-link">&iquest;Necesitas ayuda?</button>
-        </div>
-        <div class="vp-recover" id="recover-box" hidden>
-          <h2 class="vp-recover-title">Recupera tu contrase&ntilde;a</h2>
-          <p class="vp-recover-sub">Escribe tu correo y te enviamos un enlace para restablecerla.</p>
-          <div class="vp-field">
-            <input type="email" id="recover-email" placeholder="Correo electr&oacute;nico para recuperar" maxlength="254">
-            <p class="vp-hint"></p>
+        <p class="ax-fine">&copy; 2026 VetPlex</p>
+      </aside>
+      <main class="ax-panel">
+        <div class="ax-card">
+          <div class="ax-mobile-brand" aria-hidden="true">
+            <span class="ax-ring"></span>
+            <span class="ax-wordmark">VETPLEX</span>
           </div>
-          <button type="button" id="recover-button" class="vp-btn-ghost">Enviar enlace de recuperaci&oacute;n</button>
-          <p class="vp-note" id="recover-msg" role="alert"></p>
-          <button type="button" id="recover-back" class="vp-link vp-back">&larr; Volver a iniciar sesi&oacute;n</button>
-        </div>
-      </div>
+          <h1 class="ax-title" id="auth-title">Te damos la bienvenida</h1>
+          <p class="ax-sub" id="auth-sub">Inicia sesi&oacute;n para continuar a VetPlex.</p>
 
-      <div id="register-form" style="display:none;">
-        <div class="vp-field">
-          <input type="email" id="register-email" placeholder="Correo electr&oacute;nico" autocomplete="email" maxlength="254">
-          <p class="vp-hint"></p>
-        </div>
-        <div class="vp-field has-toggle">
-          <input type="password" id="register-password" placeholder="Contrase&ntilde;a (m&iacute;nimo 6 caracteres)" autocomplete="new-password" maxlength="128">
-          <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
-          <p class="vp-hint"></p>
-        </div>
-        <div class="vp-strength" data-level="0">
-          <div class="vp-strength-bar"><span></span><span></span><span></span><span></span></div>
-          <p class="vp-strength-label">Usa 8+ caracteres con letras y n&uacute;meros.</p>
-        </div>
-        <p class="vp-error" id="register-error" role="alert"></p>
-        <button type="button" id="register-button" class="vp-btn-primary">Registrarse</button>
-      </div>
+          <div id="login-form">
+            <section class="ax-step" id="login-step-1" aria-label="Paso 1 de 2: tu correo electr&oacute;nico">
+              <div class="vp-field ax-float">
+                <input type="email" id="login-email" placeholder=" " autocomplete="email" maxlength="254">
+                <label for="login-email">Correo electr&oacute;nico</label>
+                <p class="vp-hint"></p>
+              </div>
+              <p class="vp-error" id="login-error" role="alert"></p>
+              <button type="button" id="login-next" class="vp-btn-primary">Siguiente</button>
+            </section>
+            <section class="ax-step" id="login-step-2" hidden aria-label="Paso 2 de 2: tu contrase&ntilde;a">
+              <button type="button" class="ax-chip" id="login-back" aria-label="Cambiar de correo">
+                <span class="ax-chip-avatar" id="login-chip-avatar">?</span>
+                <span class="ax-chip-email" id="login-chip-email"></span>
+                <span class="ax-chip-change">Cambiar</span>
+              </button>
+              <div class="vp-field ax-float has-toggle">
+                <input type="password" id="login-password" placeholder=" " autocomplete="current-password" maxlength="128">
+                <label for="login-password">Contrase&ntilde;a</label>
+                <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
+                <p class="vp-hint"></p>
+              </div>
+              <p class="vp-error" id="login-error2" role="alert"></p>
+              <button type="button" id="login-button" class="vp-btn-primary">Iniciar sesi&oacute;n</button>
+              <div class="vp-opts">
+                <label class="vp-remember"><input type="checkbox" id="remember-me" checked> Recu&eacute;rdame</label>
+                <button type="button" id="forgot-password" class="vp-link">&iquest;Olvidaste tu contrase&ntilde;a?</button>
+              </div>
+            </section>
+            <div class="vp-recover" id="recover-box" hidden>
+              <p class="vp-recover-sub">Escribe tu correo y te enviamos un enlace para restablecerla.</p>
+              <div class="vp-field ax-float">
+                <input type="email" id="recover-email" placeholder=" " maxlength="254">
+                <label for="recover-email">Correo electr&oacute;nico</label>
+                <p class="vp-hint"></p>
+              </div>
+              <button type="button" id="recover-button" class="vp-btn-ghost">Enviar enlace de recuperaci&oacute;n</button>
+              <p class="vp-note" id="recover-msg" role="alert"></p>
+              <button type="button" id="recover-back" class="vp-link vp-back">&larr; Volver a iniciar sesi&oacute;n</button>
+            </div>
+          </div>
 
-      <p class="vp-switch"><span id="auth-switch-text">&iquest;Primera vez en VetPlex?</span> <button type="button" id="switch-auth" class="vp-link-strong">Reg&iacute;strate ahora.</button></p>
-    </div>
+          <div id="register-form" style="display:none;">
+            <section class="ax-step" id="register-step-1" aria-label="Paso 1 de 2: tu correo electr&oacute;nico">
+              <div class="vp-field ax-float">
+                <input type="email" id="register-email" placeholder=" " autocomplete="email" maxlength="254">
+                <label for="register-email">Correo electr&oacute;nico</label>
+                <p class="vp-hint"></p>
+              </div>
+              <p class="vp-error" id="register-error" role="alert"></p>
+              <button type="button" id="register-next" class="vp-btn-primary">Siguiente</button>
+            </section>
+            <section class="ax-step" id="register-step-2" hidden aria-label="Paso 2 de 2: crea tu contrase&ntilde;a">
+              <button type="button" class="ax-chip" id="register-back" aria-label="Cambiar de correo">
+                <span class="ax-chip-avatar" id="register-chip-avatar">?</span>
+                <span class="ax-chip-email" id="register-chip-email"></span>
+                <span class="ax-chip-change">Cambiar</span>
+              </button>
+              <div class="vp-field ax-float has-toggle">
+                <input type="password" id="register-password" placeholder=" " autocomplete="new-password" maxlength="128">
+                <label for="register-password">Crea una contrase&ntilde;a</label>
+                <button type="button" class="vp-pw-toggle is-off" aria-label="Mostrar contrase&ntilde;a"><i></i></button>
+                <p class="vp-hint"></p>
+              </div>
+              <div class="vp-strength" data-level="0">
+                <div class="vp-strength-bar"><span></span><span></span><span></span><span></span></div>
+                <p class="vp-strength-label">Usa 8+ caracteres con letras y n&uacute;meros.</p>
+              </div>
+              <p class="vp-error" id="register-error2" role="alert"></p>
+              <button type="button" id="register-button" class="vp-btn-primary">Crear cuenta</button>
+              <p class="vp-note">Te enviaremos un correo de verificaci&oacute;n.</p>
+            </section>
+          </div>
+
+          <p class="vp-switch"><span id="auth-switch-text">&iquest;Primera vez en VetPlex?</span> <button type="button" id="switch-auth" class="vp-link-strong">Crea tu cuenta</button></p>
+        </div>
+      </main>
     </div>
   </div>
 
