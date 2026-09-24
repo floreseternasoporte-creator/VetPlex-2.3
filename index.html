@@ -1039,19 +1039,24 @@
     </div>
   </header>
 
-  <div class="banner">
-    <img src="https://www.syfy.com/sites/syfy/files/blog-images/shieldhero.jpg" alt="Gintama" class="banner-image">
+  <!-- Héroe "Lo mejor de VetPlex": lo llena el algoritmo con el top 5 del catálogo -->
+  <div class="banner" id="vp-hero">
+    <img class="banner-image" id="vp-hero-img" alt="Anime destacado">
+    <div class="banner-shade"></div>
     <div class="banner-content">
-      <div class="banner-title">The Rising of the Shield Hero</div>
-      <div class="banner-description">Héroe del escudo lucha en mundo paralelo contra monstruos interdimensionales</div>
+      <div class="vp-hero-kicker"><span class="vp-hero-star">★</span> Lo mejor de VetPlex</div>
+      <div class="banner-title" id="vp-hero-title">VetPlex</div>
+      <div class="banner-meta" id="vp-hero-meta"></div>
+      <div class="banner-description" id="vp-hero-desc">Cargando destacados…</div>
       <div class="banner-buttons">
-        <button class="banner-button" onclick="showModal('Anime Destacado', 'Un hombre equipado solo con un escudo es elegido para ser uno de los grandes defensores del mundo, pero cuando una traición destroza su reputación, intenta recuperar la confianza del público luchando contra el mal junto a unos pocos leales.', '2019')">Ver Detalles</button>
-        <button class="banner-button" onclick="addToList('Anime Destacado')">Añadir a Lista</button>
+        <button type="button" class="banner-button vp-btn-primary" id="vp-hero-details">▶ Ver Detalles</button>
+        <button type="button" class="banner-button vp-btn-ghost" id="vp-hero-add">＋ Mi Lista</button>
       </div>
+      <div class="vp-hero-dots" id="vp-hero-dots"></div>
     </div>
   </div>
 
-  <!-- Catálogo de animes (se llena desde Firebase; oculto si no hay datos) -->
+<!-- Catálogo de animes (se llena desde Firebase; oculto si no hay datos) -->
   <div class="carousel-container" id="vp-catalogo-wrap">
     <div class="carousel-title">Animes</div>
     <div class="carousel vp-rail" id="vp-catalogo"><p class="vp-empty">Cargando catálogo…</p></div>
@@ -1283,6 +1288,74 @@
       fillRail(rails.populares, byVotes);
       fillRail(rails.vistos, byAvg.filter(a => avgRating(a) > 0));
       fillRail(rails.recomendados, byNew);
+      renderHero(items);
+    }
+    /* Héroe "Lo mejor de VetPlex": puntuación = promedio de votos ×2.2 +
+       cantidad de votos ×0.35 + novedad ×1.6 + tiene imagen ×0.6.
+       Rota el top 5 cada 8 segundos. */
+    let vpHeroList = [], vpHeroIdx = 0, vpHeroTimer = null;
+    function heroScore(a) {
+      const avg = (typeof avgRating === 'function' ? avgRating(a) : 0) || 0;
+      const n = (typeof votesCount === 'function' ? votesCount(a) : 0) || 0;
+      const yr = (typeof validYear === 'function' ? validYear(a) : 0) || 0;
+      const recency = yr > 0 ? Math.max(0, Math.min(1, (yr - 1995) / 31)) : 0;
+      const hasImg = (a.imageUrl || a.image) ? 1 : 0;
+      return avg * 2.2 + Math.min(n, 10) * 0.35 + recency * 1.6 + hasImg * 0.6;
+    }
+    function paintHero() {
+      const a = vpHeroList[vpHeroIdx];
+      const img = document.getElementById('vp-hero-img');
+      const title = document.getElementById('vp-hero-title');
+      const meta = document.getElementById('vp-hero-meta');
+      const desc = document.getElementById('vp-hero-desc');
+      const dots = document.getElementById('vp-hero-dots');
+      if (!a || !img || !title) return;
+      const swap = () => {
+        img.src = a.imageUrl || a.image; img.alt = a.title;
+        title.textContent = a.title;
+        const avg = (typeof avgRating === 'function' ? avgRating(a) : 0) || 0;
+        const n = (typeof votesCount === 'function' ? votesCount(a) : 0) || 0;
+        const bits = [a.year, a.category, avg > 0 ? ('★ ' + avg.toFixed(1) + (n ? ' (' + n + ' votos)' : '')) : null].filter(Boolean);
+        if (meta) meta.textContent = bits.join('  •  ');
+        if (desc) desc.textContent = a.synopsis || '';
+        if (dots) dots.innerHTML = vpHeroList.map((_, i) =>
+          '<button type="button" data-i="' + i + '" class="' + (i === vpHeroIdx ? 'on' : '') + '" aria-label="Destacado ' + (i + 1) + '"></button>').join('');
+      };
+      img.style.opacity = '0';
+      setTimeout(() => { swap(); img.style.opacity = '1'; }, 300);
+    }
+    function renderHero(animes) {
+      const items = (animes || []).filter(a => a && a.title && String(a.title).trim() && (a.imageUrl || a.image));
+      if (!items.length) return;
+      vpHeroList = [...items].sort((x, y) => heroScore(y) - heroScore(x)).slice(0, 5);
+      vpHeroIdx = 0;
+      const img = document.getElementById('vp-hero-img');
+      if (img) { img.style.opacity = '1'; }
+      const a = vpHeroList[0];
+      if (a && img) {
+        img.src = a.imageUrl || a.image; img.alt = a.title;
+        document.getElementById('vp-hero-title').textContent = a.title;
+        const avg = (typeof avgRating === 'function' ? avgRating(a) : 0) || 0;
+        const n = (typeof votesCount === 'function' ? votesCount(a) : 0) || 0;
+        const bits = [a.year, a.category, avg > 0 ? ('★ ' + avg.toFixed(1) + (n ? ' (' + n + ' votos)' : '')) : null].filter(Boolean);
+        const meta = document.getElementById('vp-hero-meta');
+        if (meta) meta.textContent = bits.join('  •  ');
+        const desc = document.getElementById('vp-hero-desc');
+        if (desc) desc.textContent = a.synopsis || '';
+        const dots = document.getElementById('vp-hero-dots');
+        if (dots) dots.innerHTML = vpHeroList.map((_, i) =>
+          '<button type="button" data-i="' + i + '" class="' + (i === 0 ? 'on' : '') + '" aria-label="Destacado ' + (i + 1) + '"></button>').join('');
+      }
+      if (vpHeroTimer) clearInterval(vpHeroTimer);
+      if (vpHeroList.length > 1) {
+        vpHeroTimer = setInterval(() => { vpHeroIdx = (vpHeroIdx + 1) % vpHeroList.length; paintHero(); }, 8000);
+      }
+    }
+    function vpHeroRestart() {
+      if (vpHeroTimer) clearInterval(vpHeroTimer);
+      if (vpHeroList.length > 1) {
+        vpHeroTimer = setInterval(() => { vpHeroIdx = (vpHeroIdx + 1) % vpHeroList.length; paintHero(); }, 8000);
+      }
     }
     function renderAnimeList(animes) {
       if (catalogo) catalogo.innerHTML = '';
@@ -1353,6 +1426,35 @@
     // El boton y la tecla Enter usan searchAnime(): exponerla globalmente
     // (las funciones de un modulo no son visibles para onclick).
     window.searchAnime = searchAnime;
+    // Héroe: puntos clicables + botones Ver Detalles / Mi Lista
+    (function wireHero() {
+      const dots = document.getElementById('vp-hero-dots');
+      if (dots && !dots.dataset.wired) {
+        dots.dataset.wired = '1';
+        dots.addEventListener('click', (e) => {
+          const b = e.target.closest('button[data-i]');
+          if (!b || !vpHeroList.length) return;
+          vpHeroIdx = (+b.dataset.i) % vpHeroList.length;
+          vpHeroRestart(); paintHero();
+        });
+      }
+      const det = document.getElementById('vp-hero-details');
+      if (det && !det.dataset.wired) {
+        det.dataset.wired = '1';
+        det.addEventListener('click', () => {
+          const a = vpHeroList[vpHeroIdx];
+          if (a && window.showModal) window.showModal(a.title, a.synopsis || '', a.year || '');
+        });
+      }
+      const add = document.getElementById('vp-hero-add');
+      if (add && !add.dataset.wired) {
+        add.dataset.wired = '1';
+        add.addEventListener('click', () => {
+          const a = vpHeroList[vpHeroIdx];
+          if (a && window.addToList) window.addToList(a.title);
+        });
+      }
+    })();
     // Cargar animes al iniciar
     displayAnimes();
   </script>
@@ -1876,6 +1978,153 @@
     .search-bar .search-input { width: auto; flex: 1 1 0; min-width: 0; }
     .banner-content { right: 16px; max-width: calc(100% - 46px); }
     .modal-content { width: calc(100% - 32px); max-width: 400px; }
+  </style>
+  <style id="vp-prime-theme">
+    /* ============================================================
+       VetPlex — tema Amazon Prime Video × Disney+
+       (adiós al rojo estilo Netflix; acento azul Prime/Disney)
+       ============================================================ */
+    :root {
+      --vp-bg: #0a0e1c;
+      --vp-bg-deep: #060913;
+      --vp-surface: #141a30;
+      --vp-accent: #00a8e1;
+      --vp-accent-deep: #0063e5;
+      --vp-text: #f4f7ff;
+      --vp-muted: #9aa3b8;
+    }
+    html, body { background: var(--vp-bg-deep) !important; }
+    body {
+      background: radial-gradient(120% 55% at 50% 0%, #111839 0%, var(--vp-bg) 55%, var(--vp-bg-deep) 100%) !important;
+      background-attachment: fixed;
+      color: var(--vp-text) !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    }
+    /* ---------- Header ---------- */
+    header {
+      background: rgba(6, 9, 19, 0.88) !important;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+      padding: 10px 16px !important;
+      display: flex !important; align-items: center !important; gap: 12px !important;
+    }
+    .logo { color: #ffffff !important; font-weight: 800 !important; font-size: 22px !important; letter-spacing: 0.5px !important; }
+    .logo::after {
+      content: ""; display: block; height: 3px; width: 36px; border-radius: 2px; margin-top: 3px;
+      background: linear-gradient(90deg, var(--vp-accent), var(--vp-accent-deep));
+    }
+    /* ---------- Buscador rehecho ---------- */
+    header .search-bar {
+      margin: 0 0 0 auto !important; max-width: 330px !important;
+      flex: 1 1 auto !important; min-width: 0 !important;
+      display: flex !important; align-items: center !important; gap: 4px !important;
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      border-radius: 999px !important; padding: 4px 12px 4px 4px !important;
+    }
+    header .search-bar:focus-within { border-color: var(--vp-accent) !important; background: rgba(255, 255, 255, 0.12) !important; }
+    header .search-icon-btn {
+      width: 36px !important; height: 36px !important; flex: 0 0 36px !important;
+      padding: 0 !important; margin: 0 !important; border: none !important;
+      border-radius: 50% !important;
+      background: linear-gradient(135deg, var(--vp-accent), var(--vp-accent-deep)) !important;
+      color: #ffffff !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      cursor: pointer; box-shadow: 0 4px 14px rgba(0, 168, 225, 0.35);
+    }
+    header .search-icon-btn .search-icon { width: 17px !important; height: 17px !important; }
+    header .search-input {
+      flex: 1 1 auto !important; min-width: 0 !important; width: auto !important;
+      background: transparent !important; border: none !important; outline: none !important;
+      box-shadow: none !important; border-radius: 0 !important;
+      color: #ffffff !important; font-size: 14px !important;
+      padding: 8px 4px !important; margin: 0 !important;
+    }
+    header .search-input::placeholder { color: var(--vp-muted) !important; }
+    /* ---------- Héroe ---------- */
+    .banner { height: clamp(400px, 58vh, 520px) !important; border-radius: 0 0 28px 28px; background: #0a0e1c; }
+    .banner-image { transition: opacity 0.3s ease; }
+    .banner-shade {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        linear-gradient(90deg, rgba(6, 9, 19, 0.9) 0%, rgba(6, 9, 19, 0.5) 45%, rgba(6, 9, 19, 0.08) 78%),
+        linear-gradient(0deg, var(--vp-bg-deep) 2%, rgba(6, 9, 19, 0) 46%);
+    }
+    .banner-content { left: 20px !important; right: 20px !important; bottom: 36px !important; max-width: 600px; }
+    .vp-hero-kicker {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
+      color: var(--vp-accent); margin-bottom: 8px;
+    }
+    .banner-title {
+      color: #ffffff !important; font-size: clamp(26px, 7vw, 44px) !important;
+      font-weight: 800 !important; line-height: 1.05; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+    }
+    .banner-meta { margin-top: 8px; font-size: 13px; font-weight: 600; color: #cdd6ea; }
+    .banner-description {
+      color: #aeb8cf !important; font-size: 14px !important; line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+      max-width: 520px;
+    }
+    .banner-buttons { display: flex !important; gap: 10px !important; margin-top: 16px !important; flex-wrap: wrap; }
+    .banner-button {
+      width: auto !important; margin: 0 !important; padding: 12px 22px !important;
+      border-radius: 10px !important; font-size: 15px !important; font-weight: 700 !important;
+      border: none !important; cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .banner-button.vp-btn-primary {
+      background: linear-gradient(135deg, var(--vp-accent), var(--vp-accent-deep)) !important;
+      color: #ffffff !important; box-shadow: 0 6px 20px rgba(0, 168, 225, 0.35);
+    }
+    .banner-button.vp-btn-ghost {
+      background: rgba(255, 255, 255, 0.14) !important; color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.24) !important;
+    }
+    .banner-button:active { transform: scale(0.97); }
+    .vp-hero-dots { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
+    .vp-hero-dots button {
+      width: 22px !important; height: 4px !important; border-radius: 2px !important;
+      background: rgba(255, 255, 255, 0.28) !important; border: none !important;
+      padding: 0 !important; margin: 0 !important; cursor: pointer;
+    }
+    .vp-hero-dots button.on { background: var(--vp-accent) !important; width: 34px !important; }
+    /* ---------- Rieles: aire en los bordes, nada se pega afuera ---------- */
+    .carousel-container { margin: 14px 0 !important; }
+    .carousel-title {
+      color: #ffffff !important; font-size: 19px !important; font-weight: 700 !important;
+      margin: 14px 16px 8px !important; display: flex !important; align-items: center; gap: 9px;
+    }
+    .carousel-title::before {
+      content: ""; width: 4px; height: 18px; border-radius: 2px; flex: 0 0 auto;
+      background: linear-gradient(180deg, var(--vp-accent), var(--vp-accent-deep));
+    }
+    .carousel.vp-rail { padding: 4px 16px 18px !important; gap: 12px !important; scroll-padding-inline: 16px; }
+    .vp-card { transition: transform 0.18s ease; }
+    .vp-card img {
+      border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+    .vp-card h3 { color: #ffffff !important; }
+    .vp-card p { color: var(--vp-muted) !important; }
+    @media (hover: hover) {
+      .vp-card:hover { transform: scale(1.05); }
+      .vp-card:hover img { box-shadow: 0 8px 24px rgba(0, 168, 225, 0.35); border-color: rgba(0, 168, 225, 0.5); }
+    }
+    .carousel-item { background: var(--vp-surface) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 12px !important; }
+    /* ---------- Modal ---------- */
+    .modal-content {
+      background: #131a30 !important; color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 16px !important;
+    }
+    .modal-content button {
+      background: linear-gradient(135deg, var(--vp-accent), var(--vp-accent-deep)) !important;
+      color: #ffffff !important; border: none !important; border-radius: 10px !important;
+    }
+    .close { color: var(--vp-accent) !important; }
+    /* ---------- Login / registro al azul Prime/Disney ---------- */
+    #overlay { --ax-accent: #00a8e1; --ax-accent-hi: #38c6f4; --ax-accent-deep: #0063e5; }
+    #switch-auth { color: var(--vp-accent) !important; }
   </style>
 </body>
 
