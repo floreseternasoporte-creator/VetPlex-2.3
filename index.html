@@ -1240,6 +1240,13 @@
       const hasImg = (a.imageUrl || a.image) ? 1 : 0;
       return avg * 2.2 + Math.min(n, 10) * 0.35 + recency * 1.6 + hasImg * 0.6;
     }
+    function vpHeroRefreshAdd() {
+      const btn = document.getElementById('vp-hero-add');
+      const a = vpHeroList[vpHeroIdx];
+      if (!btn || !a) return;
+      if (typeof window.vpAnimeKey !== 'function' || typeof window.vpListHas !== 'function') return;
+      btn.textContent = window.vpListHas(window.vpAnimeKey(a)) ? '✓ En mi lista' : '＋ Mi Lista';
+    }
     function paintHero() {
       const a = vpHeroList[vpHeroIdx];
       const img = document.getElementById('vp-hero-img');
@@ -1250,6 +1257,7 @@
       const badge = document.getElementById('vp-hero-badge');
       const content = document.querySelector('#vp-hero .banner-content');
       if (!a || !img || !title) return;
+      vpHeroRefreshAdd();
       const isMovie = /pel[ií]cula|movie|film|largometraje/i.test([a.type, a.category, a.subcategory].join(' '));
       const swap = () => {
         img.src = a.imageUrl || a.image; img.alt = a.title;
@@ -1401,7 +1409,17 @@
         add.dataset.wired = '1';
         add.addEventListener('click', () => {
           const a = vpHeroList[vpHeroIdx];
-          if (a && window.addToList) window.addToList(a.title);
+          if (!a || typeof window.vpAnimeKey !== 'function' || typeof window.vpListHas !== 'function') return;
+          const key = window.vpAnimeKey(a);
+          if (window.vpListHas(key)) {
+            window.vpListRemove(key);
+            if (window.vpToast) window.vpToast('Eliminado de tu lista');
+          } else {
+            window.vpListAdd(a);
+            if (typeof window.__vpAddOrig === 'function') window.__vpAddOrig(a.title || '');
+            else if (window.vpToast) window.vpToast('Añadido a tu lista');
+          }
+          vpHeroRefreshAdd();
         });
       }
     })();
@@ -1839,6 +1857,9 @@
         card.addEventListener('click', function () {
           try {
             var a = JSON.parse(card.getAttribute('data-info'));
+            /* Misma clave de Mi Lista que la ruta del catálogo: si el título
+               existe en el catálogo, heredar su _key. */
+            if (window.vpFindAnime) { var fnd = window.vpFindAnime(a.title); if (fnd && fnd._key) a._key = fnd._key; }
             if (window.vpOpenDetail) window.vpOpenDetail(a);
           } catch (e) {}
         });
@@ -2366,6 +2387,10 @@
     if (all[key]) { delete all[key]; store.set(LIST_KEY, all); }
   }
   window.vpListAdd = vpListAdd;
+  window.vpListHas = vpListHas;
+  window.vpListRemove = vpListRemove;
+  window.vpAnimeKey = vpAnimeKey;
+  window.vpFindAnime = vpFindAnime;
 
   /* Envolver window.addToList (la define el módulo): guarda copia local
      con póster y datos para la vista Mi Lista, sin tocar Firebase. */
@@ -2610,6 +2635,8 @@
         var info = JSON.parse(item.getAttribute('data-info'));
         if (!info || !info.title || seen['s:' + norm(info.title)]) return;
         seen['s:' + norm(info.title)] = 1;
+        /* Misma clave de Mi Lista que la ruta del catálogo. */
+        if (typeof vpFindAnime === 'function') { var cf = vpFindAnime(info.title); if (cf && cf._key) info._key = cf._key; }
         var img = item.querySelector('img');
         out.push({
           key: 'sched:' + slug(info.title), title: info.title,
