@@ -1864,6 +1864,19 @@
         }
       }
     </script>
-  </body>
+    <style id="vp-ios-hardening">
+    /* VetPlex: blindaje anti-desbordamiento en iPhone (viewport ~390px).
+       Los bloques de CSS concatenados traen reglas globales (button/input
+       al 100% sin box-sizing) que en iOS Safari provocan scroll lateral. */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { overflow-x: clip; }
+    @supports not (overflow: clip) { html { overflow-x: hidden; } }
+    .search-bar { min-width: 0; flex: 1 1 auto; }
+    .search-bar .search-icon-btn { width: auto; flex: 0 0 auto; }
+    .search-bar .search-input { width: auto; flex: 1 1 0; min-width: 0; }
+    .banner-content { right: 16px; max-width: calc(100% - 46px); }
+    .modal-content { width: calc(100% - 32px); max-width: 400px; }
+  </style>
+</body>
 
   </html>
