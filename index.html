@@ -43,39 +43,23 @@
     }
 
     h1, h2 {
-      animation: textFly 6s infinite ease-in-out;
-      color: #ffcc00;
-      text-shadow: 0 0 10px #d52b1e, 0 0 20px #a40000;
+      color: #ffffff;
+      text-shadow: none;
       margin-bottom: 20px;
-    }
-
-    @keyframes textFly {
-      0% {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      50% {
-        transform: translateX(-20px);
-        opacity: 0.7;
-      }
-      100% {
-        transform: translateX(0);
-        opacity: 1;
-      }
     }
 
     input {
       display: block;
       margin: 15px 0;
       padding: 15px;
-      border: 3px solid #d52b1e;
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 10px;
       width: 100%;
       background-color: #1c1c1c;
       color: #f5f5f5;
       font-size: 18px;
-      text-shadow: 0 0 5px #d52b1e;
-      box-shadow: 0 0 10px #d52b1e;
+      text-shadow: none;
+      box-shadow: none;
     }
 
     button {
@@ -87,26 +71,14 @@
       cursor: pointer;
       width: 100%;
       font-size: 20px;
-      transition: background-color 0.3s, box-shadow 0.3s;
-      box-shadow: 0 0 20px #ff4500, inset 0 0 5px #ff4500;
-      text-shadow: 0 0 5px #ffcc00;
-      animation: buttonHover 2s infinite alternate;
+      transition: background-color 0.3s;
+      box-shadow: none;
+      text-shadow: none;
     }
 
     button:hover {
       background-color: #d52b1e;
-      box-shadow: 0 0 30px #ff0000, inset 0 0 10px #ff0000;
-    }
-
-    @keyframes buttonHover {
-      from {
-        transform: scale(1);
-        box-shadow: 0 0 20px #ff4500, inset 0 0 5px #ff4500;
-      }
-      to {
-        transform: scale(1.05);
-        box-shadow: 0 0 30px #ff4500, inset 0 0 10px #ff4500;
-      }
+      box-shadow: none;
     }
 
 
@@ -1086,15 +1058,10 @@
       <h2 id="modal-title"></h2>
       <p id="modal-description"></p>
       <p id="modal-year"></p>
-      <div id="modal-vote">
-        <span>Califica:</span>
-        <button onclick="vote('like')">Bueno</button>
-        <button onclick="vote('dislike')">Malo</button>
-      </div>
     </div>
   </div>
 
-  <div id="vote-message" class="vote-animation">Gracias por tu voto!</div>
+  <div id="vote-message" class="vote-animation"></div>
 
   <!-- Agregar el SDK de Firebase -->
   <script type="module">
@@ -1153,28 +1120,6 @@
       const input = document.getElementById("search-input").value;
       // Lógica para buscar anime (puedes implementar esto según tus necesidades)
       alert("Buscando anime: " + input);
-    }
-
-    // Función para votar
-    function vote(type) {
-      const animeTitle = document.getElementById("modal-title").innerText;
-      push(ref(database, 'votes/' + currentUid()), {
-        anime: animeTitle,
-        type: type,
-        timestamp: Date.now()
-      }).then(() => {
-        showVoteMessage();
-      });
-    }
-
-    // Función para mostrar el mensaje de agradecimiento por el voto
-    function showVoteMessage() {
-      const messageElement = document.getElementById("vote-message");
-      messageElement.textContent = "Gracias por tu voto!";
-      messageElement.style.display = "block";
-      setTimeout(() => {
-        messageElement.style.display = "none";
-      }, 2000);
     }
 
     // Los botones usan onclick="...": las funciones de un módulo no son
@@ -1313,9 +1258,7 @@
       const swap = () => {
         img.src = a.imageUrl || a.image; img.alt = a.title;
         title.textContent = a.title;
-        const avg = (typeof avgRating === 'function' ? avgRating(a) : 0) || 0;
-        const n = (typeof votesCount === 'function' ? votesCount(a) : 0) || 0;
-        const bits = [a.year, a.category, avg > 0 ? ('★ ' + avg.toFixed(1) + (n ? ' (' + n + ' votos)' : '')) : null].filter(Boolean);
+        const bits = [a.year, a.category].filter(Boolean);
         if (meta) meta.textContent = bits.join('  •  ');
         if (desc) desc.textContent = a.synopsis || '';
         if (dots) dots.innerHTML = vpHeroList.map((_, i) =>
@@ -1335,9 +1278,7 @@
       if (a && img) {
         img.src = a.imageUrl || a.image; img.alt = a.title;
         document.getElementById('vp-hero-title').textContent = a.title;
-        const avg = (typeof avgRating === 'function' ? avgRating(a) : 0) || 0;
-        const n = (typeof votesCount === 'function' ? votesCount(a) : 0) || 0;
-        const bits = [a.year, a.category, avg > 0 ? ('★ ' + avg.toFixed(1) + (n ? ' (' + n + ' votos)' : '')) : null].filter(Boolean);
+        const bits = [a.year, a.category].filter(Boolean);
         const meta = document.getElementById('vp-hero-meta');
         if (meta) meta.textContent = bits.join('  •  ');
         const desc = document.getElementById('vp-hero-desc');
@@ -1899,7 +1840,6 @@
         <span class="modal-close" id="modal-close">&times;</span>
         <h2 id="modal-title"></h2>
         <p id="modal-date"></p>
-        <p id="modal-rating"></p>
         <p id="modal-synopsis"></p>
         <div class="season-select" id="season-select" style="display: none;">
           <button onclick="showEpisodes('season1')">Season 1</button>
@@ -1913,7 +1853,6 @@
       const modal = document.getElementById('anime-modal');
       const modalTitle = document.querySelector('#anime-modal #modal-title');
       const modalDate = document.getElementById('modal-date');
-      const modalRating = document.getElementById('modal-rating');
       const modalSynopsis = document.getElementById('modal-synopsis');
       const modalClose = document.getElementById('modal-close');
       const seasonSelect = document.getElementById('season-select');
@@ -1923,7 +1862,6 @@
           const info = JSON.parse(item.getAttribute('data-info'));
           modalTitle.innerText = info.title;
           modalDate.innerText = `Fecha de estreno: ${info.date}`;
-          modalRating.innerText = `Calificación: ${info.rating}`;
           modalSynopsis.innerText = info.synopsis;
           if (info.hasSeasons) {
             seasonSelect.style.display = 'block';
