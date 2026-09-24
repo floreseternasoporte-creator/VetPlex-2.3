@@ -1057,6 +1057,24 @@
     <div class="carousel vp-rail" id="vp-catalogo"><p class="vp-empty">Cargando catálogo…</p></div>
   </div>
 
+  <!-- Carruseles por criterio (se llenan con datos reales del catálogo) -->
+  <div class="carousel-container">
+    <div class="carousel-title">Emisi&oacute;n</div>
+    <div class="carousel vp-rail" id="carousel-emision"></div>
+  </div>
+  <div class="carousel-container">
+    <div class="carousel-title">Los m&aacute;s Populares</div>
+    <div class="carousel vp-rail" id="carousel-populares"></div>
+  </div>
+  <div class="carousel-container">
+    <div class="carousel-title">M&aacute;s Vistas</div>
+    <div class="carousel vp-rail" id="carousel-vistos"></div>
+  </div>
+  <div class="carousel-container">
+    <div class="carousel-title">M&aacute;s Recomendados</div>
+    <div class="carousel vp-rail" id="carousel-recomendados"></div>
+  </div>
+
   <div id="modal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -1167,459 +1185,177 @@
 
    
   
-  <!DOCTYPE html>
-  <html lang="es">
-
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VetPlex - Publicar Anime</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #141414;
-        color: #fff;
-        margin: 0;
-        padding: 20px;
-        transition: background-color 0.5s;
+  <!-- Catalogo VetPlex: carga desde Firebase Realtime (/animes) con respaldo REST.
+       Reemplaza al antiguo documento embebido "Publicar Anime" (eliminado 2026-09-24):
+       la publicacion por usuarios, el reporte con Telegram y su modal ya no existen.
+       Este modulo conserva el cargador del catalogo, la busqueda real y los rieles. -->
+  <script type="module">
+    import {
+      initializeApp,
+      getApps,
+      getApp
+    } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      onValue
+    } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
+      authDomain: "vetplex-animes.firebaseapp.com",
+      projectId: "vetplex-animes",
+      storageBucket: "vetplex-animes.appspot.com",
+      messagingSenderId: "485618641909",
+      appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
+      measurementId: "G-3QGGL7CWQ0",
+      databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
+    };
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const catalogo = document.getElementById('vp-catalogo');
+    const catalogoWrap = document.getElementById('vp-catalogo-wrap');
+    const rails = {
+      emision: document.getElementById('carousel-emision'),
+      populares: document.getElementById('carousel-populares'),
+      vistos: document.getElementById('carousel-vistos'),
+      recomendados: document.getElementById('carousel-recomendados'),
+    };
+    // Poster de respaldo (SVG inline): si un poster falla, se conserva la tarjeta con titulo y anio
+    const POSTER_FALLBACK = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450"><rect width="300" height="450" fill="#1a1d29"/><text x="150" y="225" fill="#8b93b8" font-family="sans-serif" font-size="22" text-anchor="middle">VetPlex</text></svg>'
+    );
+    let catalogLoaded = false; // true cuando onValue o el respaldo REST ya pintaron el catalogo
+    // Metricas reales del catalogo para ordenar los rieles
+    function votesCount(anime) {
+      const r = anime && anime.ratings;
+      return (r && typeof r === 'object') ? Object.keys(r).length : 0;
+    }
+    function avgRating(anime) {
+      const r = anime && anime.ratings;
+      if (r && typeof r === 'object') {
+        const vals = Object.values(r).map(x => parseFloat(x && x.value) || 0).filter(v => v > 0);
+        if (vals.length) return vals.reduce((s, v) => s + v, 0) / vals.length;
       }
-
-      h1 {
-        text-align: center;
-        animation: fadeIn 1s;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-
-        to {
-          opacity: 1;
-        }
-      }
-
-      #header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-
-      form {
-        margin-bottom: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        animation: slideIn 0.5s ease;
-      }
-
-      @keyframes slideIn {
-        from {
-          transform: translateY(-20px);
-          opacity: 0;
-        }
-
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      input[type="text"],
-      input[type="number"],
-      input[type="search"],
-      select,
-      textarea {
-        margin: 10px;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        width: 300px;
-        transition: transform 0.2s;
-      }
-
-      input[type="text"]:focus,
-      input[type="number"]:focus,
-      select:focus,
-      textarea:focus {
-        transform: scale(1.02);
-        outline: none;
-      }
-
-      button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        background-color: #e50914;
-        color: #fff;
-        cursor: pointer;
-        transition: background-color 0.3s;
-      }
-
-      button:hover {
-        background-color: #f40612;
-      }
-
-      .carousel {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        gap: 10px;
-        padding: 10px 0;
-      }
-
-      .anime-card {
-        flex: 0 0 auto;
-        width: 200px;
-        background-color: #222;
-        border-radius: 5px;
-        position: relative;
-        cursor: pointer;
-        scroll-snap-align: start;
-        padding: 10px;
-        transition: transform 0.3s;
-      }
-
-      .anime-card:hover {
-        transform: scale(1.05);
-      }
-
-      .anime-card img {
-        width: 100%;
-        height: auto;
-        border-radius: 5px;
-      }
-
-      .rating {
-        margin-top: 10px;
-      }
-
-      .anime-info {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.8);
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-      }
-
-      .info-content {
-        background-color: #333;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        color: #fff;
-        position: relative;
-        animation: fadeIn 0.5s;
-      }
-
-      .close-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        cursor: pointer;
-        color: red;
-        font-size: 20px;
-      }
-
-      .error {
-        color: red;
-        text-align: center;
-      }
-
-      .success {
-        color: green;
-        text-align: center;
-      }
-
-      .report-form {
-        margin-top: 20px;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div id="header">
-      <h1>Animes Publicados por Usuarios</h1>
-
-    </div>
-    <form id="animeForm">
-      <input type="text" id="title" placeholder="Título del Anime" required>
-      <input type="number" id="year" placeholder="Año de Estreno" required>
-      <input type="text" id="synopsis" placeholder="Sinopsis" required>
-      <input type="text" id="imageUrl" placeholder="URL de la Imagen" required>
-      <button type="submit">Publicar Anime</button>
-      <div class="error" id="error"></div>
-      <div class="success" id="success"></div>
-    </form>
-
-    <h2>Animes Publicados</h2>
-    <div class="carousel" id="animeCarousel"></div>
-
-    <div class="anime-info" id="animeInfo">
-      <div class="info-content" id="infoContent">
-        <span class="close-btn" id="closeBtn">✖</span>
-        <h3 id="infoTitle"></h3>
-        <p id="infoYear"></p>
-        <p id="infoSynopsis"></p>
-        <div class="rating">
-          <h4>Califica este anime:</h4>
-          <span id="starRating">
-            <i class="fas fa-star" data-value="1"></i>
-            <i class="fas fa-star" data-value="2"></i>
-            <i class="fas fa-star" data-value="3"></i>
-            <i class="fas fa-star" data-value="4"></i>
-            <i class="fas fa-star" data-value="5"></i>
-          </span>
-          <div class="success" id="ratingSuccess"></div>
-        </div>
-
-        <!-- Formulario de reporte -->
-        <div class="report-form">
-          <h4>Reportar Anime</h4>
-          <input type="text" id="telegramUser" placeholder="Nombre de usuario en Telegram" required>
-          <select id="reportReason" required>
-            <option value="">Selecciona un motivo</option>
-            <option value="Error en el episodio">Error en el episodio</option>
-            <option value="Problemas de sincronización">Problemas de sincronización</option>
-            <option value="Mala calidad">Mala calidad</option>
-            <option value="Otros">Otros</option>
-          </select>
-          <textarea id="customReason" placeholder="Escribe el motivo del reporte si seleccionaste 'Otros'" rows="4"></textarea>
-          <button id="reportBtn">Enviar Reporte</button>
-        </div>
-      </div>
-    </div>
-
-    <script type="module">
-      import {
-        initializeApp,
-        getApps,
-        getApp
-      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-      import {
-        getDatabase,
-        ref,
-        set,
-        onValue,
-        push
-      } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
-      const firebaseConfig = {
-        apiKey: "AIzaSyBGymYEny8_sW8LremajNvVrDzF2OvRqtk",
-        authDomain: "vetplex-animes.firebaseapp.com",
-        projectId: "vetplex-animes",
-        storageBucket: "vetplex-animes.appspot.com",
-        messagingSenderId: "485618641909",
-        appId: "1:485618641909:web:8030f45a4ad757a4878ebc",
-        measurementId: "G-3QGGL7CWQ0",
-        databaseURL: "https://vetplex-animes-default-rtdb.firebaseio.com",
-      };
-      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-      const database = getDatabase(app);
-      const animeForm = document.getElementById('animeForm');
-      const animeCarousel = document.getElementById('animeCarousel');
-      const catalogo = document.getElementById('vp-catalogo');
-      const catalogoWrap = document.getElementById('vp-catalogo-wrap');
-      const successDiv = document.getElementById('success');
-      const errorDiv = document.getElementById('error');
-      const closeBtn = document.getElementById('closeBtn');
-      const animeInfo = document.getElementById('animeInfo');
-      const ratingSuccessDiv = document.getElementById('ratingSuccess');
-      const starRating = document.getElementById('starRating');
-      const reportBtn = document.getElementById('reportBtn');
-      const telegramUserInput = document.getElementById('telegramUser');
-      const reportReasonSelect = document.getElementById('reportReason');
-      const customReasonTextarea = document.getElementById('customReason');
-      let currentAnime; // Variable para almacenar el anime seleccionado
-      // Publicar Anime
-      animeForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const title = document.getElementById('title').value;
-        const year = document.getElementById('year').value;
-        const synopsis = document.getElementById('synopsis').value;
-        const imageUrl = document.getElementById('imageUrl').value;
-        // Validación de los campos
-        if (!title || !year || !synopsis || !imageUrl) {
-          errorDiv.textContent = "Por favor completa todos los campos.";
-          return;
-        }
-        errorDiv.textContent = ""; // Limpiar mensajes de error
-        const animeData = {
-          title,
-          year,
-          synopsis,
-          imageUrl
-        };
-        const newAnimeRef = push(ref(database, 'animes'));
-        set(newAnimeRef, animeData)
-          .then(() => {
-            successDiv.textContent = "Anime publicado con éxito.";
-            displayAnimes(); // Actualizar la lista de animes
-            animeForm.reset(); // Limpiar el formulario
-          })
-          .catch((error) => {
-            console.error("Error al publicar el anime:", error);
-            errorDiv.textContent = "Error al publicar el anime.";
-          });
+      const s = parseFloat(anime && anime.rating);
+      return isNaN(s) ? 0 : s;
+    }
+    function validYear(anime) {
+      const y = parseInt(anime && anime.year, 10);
+      return (y >= 1900 && y <= 2026) ? y : 0;
+    }
+    // Tarjeta estilo streaming del catalogo (abre el modal principal)
+    function buildVpCard(anime) {
+      const card = document.createElement('article');
+      card.className = 'vp-card';
+      const img = document.createElement('img');
+      img.src = anime.imageUrl;
+      img.alt = anime.title || '';
+      img.loading = 'lazy';
+      img.onerror = () => { img.onerror = null; img.src = POSTER_FALLBACK; };
+      const h3 = document.createElement('h3');
+      h3.textContent = anime.title || 'Sin título';
+      const p = document.createElement('p');
+      p.textContent = anime.year || '';
+      card.append(img, h3, p);
+      card.addEventListener('click', () => {
+        if (window.showModal) window.showModal(anime.title, anime.synopsis, anime.year);
       });
-      // Mostrar Animes
-      // Póster de respaldo (SVG inline): si un póster falla, se conserva la tarjeta con título y año
-      const POSTER_FALLBACK = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450"><rect width="300" height="450" fill="#1a1d29"/><text x="150" y="225" fill="#8b93b8" font-family="sans-serif" font-size="22" text-anchor="middle">VetPlex</text></svg>'
-      );
-      let catalogLoaded = false; // true cuando onValue o el respaldo REST ya pintaron el catálogo
-      function renderAnimeList(animes) {
-        animeCarousel.innerHTML = ""; // Limpiar la lista antes de volver a cargar
-        if (catalogo) catalogo.innerHTML = "";
-        let catalogCount = 0;
-        animes.forEach((anime) => {
-          if (!anime) return;
-          const animeCard = document.createElement('div');
-          animeCard.className = 'anime-card';
-          animeCard.innerHTML = `
-            <img src="${anime.imageUrl}" alt="${anime.title}">
-            <h3>${anime.title}</h3>
-            <p>${anime.year}</p>
-          `;
-          animeCard.addEventListener('click', () => showAnimeInfo(anime));
-          animeCarousel.appendChild(animeCard);
-          // Tarjeta del catálogo de la plataforma (misma data de Firebase)
-          if (catalogo) {
-            const card = document.createElement('article');
-            card.className = 'vp-card';
-            const img = document.createElement('img');
-            img.src = anime.imageUrl;
-            img.alt = anime.title;
-            img.loading = 'lazy';
-            img.onerror = () => { img.onerror = null; img.src = POSTER_FALLBACK; };
-            const h3 = document.createElement('h3');
-            h3.textContent = anime.title;
-            const p = document.createElement('p');
-            p.textContent = anime.year || '';
-            card.append(img, h3, p);
-            card.addEventListener('click', () => {
-              if (window.showModal) window.showModal(anime.title, anime.synopsis, anime.year);
-            });
-            catalogo.appendChild(card);
-            catalogCount++;
-          }
+      return card;
+    }
+    function fillRail(el, list) {
+      if (!el) return;
+      el.innerHTML = '';
+      if (!list.length) {
+        el.innerHTML = '<p class="vp-empty">Próximamente.</p>';
+        return;
+      }
+      list.forEach(anime => el.appendChild(buildVpCard(anime)));
+    }
+    // Rieles con datos reales: emision (anio desc), populares (mas votos),
+    // vistas (mejor promedio), recomendados (recien agregados)
+    function renderRails(animes) {
+      const items = animes.filter(a => a && a.title && String(a.title).trim());
+      const byYear = [...items].sort((a, b) => validYear(b) - validYear(a));
+      const byVotes = [...items].sort((a, b) => (votesCount(b) - votesCount(a)) || (avgRating(b) - avgRating(a)));
+      const byAvg = [...items].sort((a, b) => (avgRating(b) - avgRating(a)) || (votesCount(b) - votesCount(a)));
+      const byNew = [...items].sort((a, b) => String(b._key || '').localeCompare(String(a._key || '')));
+      fillRail(rails.emision, byYear.filter(a => validYear(a) > 0));
+      fillRail(rails.populares, byVotes);
+      fillRail(rails.vistos, byAvg.filter(a => avgRating(a) > 0));
+      fillRail(rails.recomendados, byNew);
+    }
+    function renderAnimeList(animes) {
+      if (catalogo) catalogo.innerHTML = '';
+      let catalogCount = 0;
+      animes.forEach((anime) => {
+        if (!anime || !anime.title || !String(anime.title).trim()) return;
+        if (catalogo) {
+          catalogo.appendChild(buildVpCard(anime));
+          catalogCount++;
+        }
+      });
+      renderRails(animes);
+      // Mostrar la seccion siempre; si no hay animes, mensaje visible
+      if (catalogoWrap) {
+        catalogoWrap.hidden = false;
+        if (catalogCount === 0 && catalogo) catalogo.innerHTML = '<p class="vp-empty">Aún no hay animes publicados.</p>';
+      }
+      catalogLoaded = true;
+    }
+    function displayAnimes() {
+      catalogLoaded = false;
+      const animesRef = ref(database, 'animes');
+      onValue(animesRef, (snapshot) => {
+        const animes = [];
+        snapshot.forEach((childSnapshot) => {
+          const v = childSnapshot.val();
+          if (v) { v._key = childSnapshot.key; animes.push(v); }
         });
-        // Mostrar la sección siempre; si no hay animes, mensaje visible
+        renderAnimeList(animes);
+      }, (err) => {
+        // Si el respaldo REST ya pinto el catalogo, no pisarlo con el error
+        if (catalogLoaded) return;
         if (catalogoWrap) {
           catalogoWrap.hidden = false;
-          if (catalogCount === 0 && catalogo) catalogo.innerHTML = '<p class="vp-empty">Aún no hay animes publicados.</p>';
-        }
-        catalogLoaded = true;
-      }
-      function displayAnimes() {
-        catalogLoaded = false;
-        const animesRef = ref(database, 'animes');
-        onValue(animesRef, (snapshot) => {
-          const animes = [];
-          snapshot.forEach((childSnapshot) => { animes.push(childSnapshot.val()); });
-          renderAnimeList(animes);
-        }, (err) => {
-          // Si el respaldo REST ya pintó el catálogo, no pisarlo con el error
-          if (catalogLoaded) return;
-          if (catalogoWrap) {
-            catalogoWrap.hidden = false;
-            if (catalogo) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
-          }
-        });
-        // Respaldo: si onValue no responde en 10s (redes que bloquean el canal
-        // realtime de Firebase), cargar por REST directo y pintar el catálogo igual.
-        setTimeout(() => {
-          if (catalogLoaded) return;
-          fetch('https://vetplex-animes-default-rtdb.firebaseio.com/animes.json')
-            .then((r) => { if (!r.ok) throw new Error('REST ' + r.status); return r.json(); })
-            .then((data) => {
-              if (catalogLoaded || !data) return;
-              renderAnimeList(Object.values(data));
-            })
-            .catch(() => {
-              if (catalogLoaded) return;
-              if (catalogoWrap) {
-                catalogoWrap.hidden = false;
-                if (catalogo && !catalogo.children.length) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
-              }
-            });
-        }, 10000);
-      }
-      // Mostrar información del anime
-      function showAnimeInfo(anime) {
-        currentAnime = anime; // Guardar anime actual
-        document.getElementById('infoTitle').textContent = anime.title;
-        document.getElementById('infoYear').textContent = anime.year;
-        document.getElementById('infoSynopsis').textContent = anime.synopsis;
-        animeInfo.style.display = 'flex';
-      }
-      // Cerrar información del anime
-      closeBtn.addEventListener('click', () => {
-        animeInfo.style.display = 'none';
-        resetRating();
-      });
-      // Calificar anime
-      starRating.addEventListener('click', (e) => {
-        if (e.target.matches('.fas.fa-star')) {
-          const rating = e.target.getAttribute('data-value');
-          ratingSuccessDiv.textContent = `Has calificado este anime con ${rating} estrellas.`;
-          resetRating();
+          if (catalogo) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
         }
       });
-      // Resetear la calificación
-      function resetRating() {
-        const stars = starRating.querySelectorAll('.fas.fa-star');
-        stars.forEach(star => {
-          star.classList.remove('selected');
-        });
-        ratingSuccessDiv.textContent = "";
-      }
-      // Enviar reporte
-      reportBtn.addEventListener('click', () => {
-        const telegramUser = telegramUserInput.value;
-        const reportReason = reportReasonSelect.value;
-        const customReason = customReasonTextarea.value;
-        if (!telegramUser || !reportReason) {
-          alert("Por favor completa todos los campos requeridos.");
-          return;
-        }
-        const reportData = {
-          telegramUser,
-          reportReason,
-          customReason: customReason || "N/A",
-          animeTitle: currentAnime.title
-        };
-        // Aquí puedes enviar los datos del reporte a tu base de datos o servidor
-        console.log("Reporte enviado:", reportData);
-        alert("Reporte enviado con éxito.");
-        telegramUserInput.value = "";
-        reportReasonSelect.value = "";
-        customReasonTextarea.value = "";
+      // Respaldo: si onValue no responde en 10s (redes que bloquean el canal
+      // realtime de Firebase), cargar por REST directo y pintar el catalogo igual.
+      setTimeout(() => {
+        if (catalogLoaded) return;
+        fetch('https://vetplex-animes-default-rtdb.firebaseio.com/animes.json')
+          .then((r) => { if (!r.ok) throw new Error('REST ' + r.status); return r.json(); })
+          .then((data) => {
+            if (catalogLoaded || !data) return;
+            const arr = Object.entries(data).map(([k, v]) => { if (v) v._key = k; return v; }).filter(Boolean);
+            renderAnimeList(arr);
+          })
+          .catch(() => {
+            if (catalogLoaded) return;
+            if (catalogoWrap) {
+              catalogoWrap.hidden = false;
+              if (catalogo && !catalogo.children.length) catalogo.innerHTML = '<p class="vp-empty">No se pudo cargar el catálogo. Revisa tu conexión.</p>';
+            }
+          });
+      }, 10000);
+    }
+    // Busqueda de anime (filtra las tarjetas del catalogo y los rieles)
+    function searchAnime() {
+      const input = document.getElementById('search-input');
+      const q = (input ? input.value : '').toLowerCase().trim();
+      document.querySelectorAll('.vp-card').forEach(card => {
+        const h3 = card.querySelector('h3');
+        const title = h3 ? h3.textContent.toLowerCase() : '';
+        card.style.display = title.includes(q) ? '' : 'none';
       });
-      // Búsqueda de anime
-      function searchAnime() {
-        const input = document.getElementById('search-input');
-        const q = (input ? input.value : '').toLowerCase().trim();
-        document.querySelectorAll('.anime-card, .vp-card').forEach(card => {
-          const h3 = card.querySelector('h3');
-          const title = h3 ? h3.textContent.toLowerCase() : '';
-          card.style.display = title.includes(q) ? '' : 'none';
-        });
-      }
-      // El botón y la tecla Enter usan searchAnime(): exponerla globalmente
-      // (las funciones de un módulo no son visibles para onclick).
-      window.searchAnime = searchAnime;
-      // Cargar animes al iniciar
-      displayAnimes();
-    </script>
-  </body>
-
-  </html>
+    }
+    // El boton y la tecla Enter usan searchAnime(): exponerla globalmente
+    // (las funciones de un modulo no son visibles para onclick).
+    window.searchAnime = searchAnime;
+    // Cargar animes al iniciar
+    displayAnimes();
+  </script>
 
   <!DOCTYPE html>
   <html lang="es">
