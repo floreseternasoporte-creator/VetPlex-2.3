@@ -585,7 +585,15 @@ body.vp-no-scroll { overflow: hidden !important; }
 @media (max-width: 959px) {
   .ax-brand { display: none; }
   .ax-panel { padding: calc(28px + env(safe-area-inset-top)) 22px calc(32px + env(safe-area-inset-bottom)); align-items: flex-start; }
-  .ax-card { max-width: 420px; margin: 0 auto; }
+  .ax-card {
+    width: 100%;
+    max-width: 420px;
+    /* margin:auto centra el bloque en vertical: el título queda en el medio
+       de la pantalla como en las apps móviles; si el contenido excede la
+       altura, los márgenes auto se resuelven a 0 y se puede hacer scroll
+       sin recortar la parte superior */
+    margin: auto;
+  }
   .ax-mobile-brand {
     display: flex;
     align-items: center;
