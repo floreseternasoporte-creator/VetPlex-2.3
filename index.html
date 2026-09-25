@@ -563,7 +563,7 @@
 <body>
   <header>
     <div class="logo">VetPlex</div>
-    <button type="button" id="vp-acct-btn" aria-label="Mi cuenta" title="Mi cuenta">👤</button>
+    <button type="button" id="vp-acct-btn" aria-label="Mi cuenta" title="Mi cuenta"><svg class="vp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </header>
 
   <!-- Héroe destacado: lo llena el algoritmo con el top 5 del catálogo -->
@@ -797,17 +797,16 @@
       }
       catalogLoaded = true;
     }
-    /* Catálogo: arranca de la caché local y luego de S3 (catalog.json).
-       Esquema de datos (panel Admin -> AWS):
-       { id, title, year, category, synopsis, image, type:'movie'|'serie',
+    /* Catálogo: 100% local. Semilla integrada + publicaciones del usuario.
+       Esquema de datos:
+       { id, title, year, category, synopsis, image, imageUrl, type:'movie'|'serie',
          status:'complete'|'airing', releaseDate, videoUrl,
          seasons:[{season, episodes:[{n,title,videoUrl}]}],
          episodes:[{n,title,videoUrl}], _key, addedAt }.
        window.__vpAnimes expone el catalogo. */
-    /* Capa de catálogo VetPlex (panel Admin): la fuente de verdad es
-       catalog.json público en S3. window.vpBootCatalog pinta la caché
-       local al instante y luego intenta S3 con cache-bust. El evento
-       'vp-catalog-updated' re-pinta tras publicar/editar/borrar. */
+    /* Capa de catálogo VetPlex: la fuente de verdad es local
+       (VP_SEED_ANIMES + 'vp_user_items_v1'). window.vpBootCatalog pinta al
+       instante. El evento 'vp-catalog-updated' re-pinta tras publicar/editar/borrar. */
     document.addEventListener('vp-catalog-updated', () => { renderAnimeList(window.__vpAnimes || []); });
     function displayAnimes() {
       if (typeof window.vpBootCatalog === 'function') window.vpBootCatalog(renderAnimeList);
@@ -1465,6 +1464,10 @@
     box-shadow: none !important; text-shadow: none !important; line-height: 1;
   }
   #vp-acct-btn.has-user { background: var(--vp-accent) !important; border-color: transparent !important; }
+  .vp-ic { width: 20px; height: 20px; display: inline-block; vertical-align: -4px; }
+  .vp-btn .vp-ic { width: 18px; height: 18px; margin-right: 8px; vertical-align: -3px; }
+  #vp-acct-btn .vp-ic { width: 20px; height: 20px; vertical-align: 0; }
+  .vp-ic-lg { width: 44px !important; height: 44px !important; }
 
   /* ---------- Mi Cuenta ---------- */
   .vp-acct-wrap { padding: 8px 16px 48px; max-width: 480px; margin: 0 auto; }
@@ -1790,7 +1793,7 @@
   </div>
   <div id="vp-search-hint" class="vp-search-hint">Explora todo el catálogo</div>
   <div id="vp-search-results" class="vp-grid"></div>
-  <div class="vp-adm-foot"><button type="button" id="vp-admin-link">Admin</button></div>
+  <div class="vp-adm-foot"><button type="button" id="vp-admin-link">Publicar</button></div>
 </section>
 
 <!-- Vista: Mi Lista -->
@@ -1836,35 +1839,23 @@
   <div class="vp-view-head vp-adm-head">
     <button type="button" class="vp-back" id="vp-admin-back" aria-label="Volver">‹</button>
     <div>
-      <h2>Admin</h2>
-      <p class="vp-view-sub">Publica animes y películas en VetPlex</p>
+      <h2>Publicar</h2>
+      <p class="vp-view-sub">Comparte animes y películas en VetPlex</p>
     </div>
-    <button type="button" id="vp-adm-logout" class="vp-adm-mini" hidden>Cerrar sesión</button>
   </div>
 
-  <!-- Puerta: correo + PIN -->
-  <div id="vp-adm-gate" class="vp-adm-box">
-    <h3 class="vp-sec" style="margin-left:0;margin-top:0">Acceso restringido</h3>
-    <p class="vp-note" id="vp-adm-gate-msg">Solo el administrador puede entrar aquí.</p>
-    <label class="vp-adm-lbl">Correo
-      <input id="vp-adm-email" type="email" class="vp-adm-in" placeholder="tu correo" autocomplete="email">
-    </label>
-    <label class="vp-adm-lbl">PIN
-      <input id="vp-adm-pin" type="password" class="vp-adm-in" inputmode="numeric" maxlength="6" placeholder="4 a 6 dígitos" autocomplete="off">
-    </label>
-    <label class="vp-adm-lbl" id="vp-adm-pin2-wrap" hidden>Confirma el PIN
-      <input id="vp-adm-pin2" type="password" class="vp-adm-in" inputmode="numeric" maxlength="6" placeholder="repite el PIN" autocomplete="off">
-    </label>
-    <button type="button" class="vp-btn vp-btn-primary" id="vp-adm-enter">Entrar</button>
-    <p class="vp-note" id="vp-adm-gate-err" style="color:#ff8a8a" hidden></p>
+  <!-- Aviso: se necesita cuenta -->
+  <div id="vp-adm-loginreq" class="vp-adm-box" hidden>
+    <h3 class="vp-sec" style="margin-left:0;margin-top:0">Inicia sesión para publicar</h3>
+    <p class="vp-note">Crea tu cuenta gratis o entra con la tuya. Sin claves, sin PIN: si tienes cuenta, puedes publicar.</p>
+    <button type="button" class="vp-btn vp-btn-primary" id="vp-adm-gologin">Ir a Mi cuenta</button>
   </div>
 
   <!-- Panel -->
   <div id="vp-adm-panel" hidden>
     <div class="vp-adm-tabs">
       <button type="button" class="on" data-atab="nuevo">＋ Nuevo</button>
-      <button type="button" data-atab="gestionar">Gestionar</button>
-      <button type="button" data-atab="aws">AWS</button>
+      <button type="button" data-atab="gestionar">Mis publicaciones</button>
     </div>
 
     <!-- Nuevo / editar -->
@@ -1907,9 +1898,10 @@
           </label>
         </div>
         <div id="vp-adm-movie-box" hidden>
-          <label class="vp-adm-lbl">Video de la película *
-            <input id="vp-adm-moviefile" type="file" accept="video/*" class="vp-adm-in">
+          <label class="vp-adm-lbl">URL del video *
+            <input id="vp-adm-movieurl" type="url" class="vp-adm-in" placeholder="https://www.youtube.com/watch?v=… o https://…/video.mp4" spellcheck="false">
           </label>
+          <p class="vp-note">Pega el enlace de YouTube o de un archivo MP4. Se reproducirá en el reproductor de VetPlex.</p>
         </div>
         <div id="vp-adm-series-box">
           <label class="vp-adm-lbl" style="max-width:150px">Temporadas
@@ -1922,7 +1914,7 @@
           <button type="submit" class="vp-btn vp-btn-primary" id="vp-adm-publish">Publicar</button>
           <button type="button" class="vp-btn vp-btn-ghost" id="vp-adm-cancel-edit" hidden>Cancelar edición</button>
         </div>
-        <p class="vp-note">Al publicar, los archivos se suben a tu bucket de AWS S3 y el catálogo se actualiza en toda la plataforma.</p>
+        <p class="vp-note">Tu publicación se guarda en este dispositivo y aparece al instante en el catálogo.</p>
       </form>
     </div>
 
@@ -1931,54 +1923,6 @@
       <div id="vp-adm-list"></div>
     </div>
 
-    <!-- AWS -->
-    <div id="vp-adm-tab-aws" class="vp-adm-tab">
-      <div class="vp-adm-box">
-        <h3 class="vp-sec" style="margin-left:0;margin-top:0">Conexión con AWS</h3>
-        <label class="vp-adm-lbl">Access Key ID
-          <input id="vp-adm-key" class="vp-adm-in" autocomplete="off" placeholder="AKIA…" spellcheck="false">
-        </label>
-        <label class="vp-adm-lbl">Secret Access Key
-          <input id="vp-adm-secret" type="password" class="vp-adm-in" autocomplete="off" spellcheck="false">
-        </label>
-        <div class="vp-adm-row">
-          <label class="vp-adm-lbl">Bucket
-            <input id="vp-adm-bucket" class="vp-adm-in" value="vetplex-media-682849160982" spellcheck="false">
-          </label>
-          <label class="vp-adm-lbl" style="max-width:130px">Región
-            <input id="vp-adm-region" class="vp-adm-in" value="us-east-2" spellcheck="false">
-          </label>
-        </div>
-        <div class="vp-adm-row">
-          <button type="button" class="vp-btn vp-btn-primary" id="vp-adm-test">Probar conexión</button>
-          <button type="button" class="vp-btn vp-btn-ghost" id="vp-adm-save-aws">Guardar</button>
-        </div>
-        <p class="vp-note" id="vp-adm-aws-msg"></p>
-        <details class="vp-adm-help">
-          <summary>Qué configurar en la consola de AWS</summary>
-          <p class="vp-note">1) <b>Lectura pública</b> (política del bucket), para que los videos se vean sin login:</p>
-          <pre class="vp-adm-pre">{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "PublicRead",
-    "Effect": "Allow",
-    "Principal": "*",
-    "Action": "s3:GetObject",
-    "Resource": "arn:aws:s3:::vetplex-media-682849160982/*"
-  }]
-}</pre>
-          <p class="vp-note">2) <b>CORS</b> del bucket (Permisos → CORS), para subir desde la web:</p>
-          <pre class="vp-adm-pre">[{
-  "AllowedHeaders": ["*"],
-  "AllowedMethods": ["GET","PUT","POST","DELETE","HEAD"],
-  "AllowedOrigins": ["https://floreseternasoporte-creator.github.io"],
-  "ExposeHeaders": ["ETag"],
-  "MaxAgeSeconds": 3000
-}]</pre>
-          <p class="vp-note">3) El usuario <b>vetplex-uploader</b> solo necesita: <span class="vp-adm-code">s3:PutObject</span>, <span class="vp-adm-code">s3:GetObject</span>, <span class="vp-adm-code">s3:DeleteObject</span>, <span class="vp-adm-code">s3:ListBucket</span> y <span class="vp-adm-code">s3:AbortMultipartUpload</span> sobre este bucket.</p>
-        </details>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -2333,6 +2277,8 @@ window.VP_COGNITO = { region: 'us-east-2', userPoolId: 'us-east-2_WflE7gKP5', us
   /* Resuelve la fuente: {kind:'video'|'youtube'|'none', url} */
   function vpResolveSource(a, ep) {
     var v = (ep && ep.videoUrl) || (a && a.videoUrl) || '';
+    var yv = vpYtId(v);
+    if (yv) return { kind: 'youtube', url: 'https://www.youtube.com/embed/' + yv + '?autoplay=1&rel=0' };
     if (v) return { kind: 'video', url: v };
     var yt = vpYtId((a && (a.trailerUrl || a.trailer)) || '');
     if (yt) return { kind: 'youtube', url: 'https://www.youtube.com/embed/' + yt + '?autoplay=1&rel=0' };
@@ -3206,6 +3152,11 @@ window.VP_COGNITO = { region: 'us-east-2', userPoolId: 'us-east-2_WflE7gKP5', us
      ============================================================ */
   var VP_COG_CDN = 'https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.12/dist/amazon-cognito-identity.min.js';
   var VP_ACCT_KEY = 'vp_acct_user_v1';
+  var VP_IC_USER = '<svg class="vp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  var VP_IC_LOCK = '<svg class="vp-ic vp-ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  var VP_IC_PLUS = '<svg class="vp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  var VP_IC_OUT = '<svg class="vp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+  var VP_IC_TRASH = '<svg class="vp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
   var vpAcctUI = 'boot';      /* boot | gate | confirm | forgot | forgot2 | dash */
   var vpAcctTab = 'signup';   /* signup | login */
   var vpAcctPendingEmail = '';
@@ -3419,7 +3370,7 @@ window.VP_COGNITO = { region: 'us-east-2', userPoolId: 'us-east-2_WflE7gKP5', us
   /* ----- interfaz de Mi Cuenta ----- */
   function vpAcctPendingHTML() {
     return '<div class="vp-acct-wrap"><div class="vp-acct-box" style="text-align:center">' +
-      '<div style="font-size:44px;margin:6px 0">🔒</div>' +
+      '<div style="margin:10px 0;color:var(--vp-accent)">' + VP_IC_LOCK + '</div>' +
       '<h3 class="vp-sec" style="margin:0 0 6px">Mi cuenta</h3>' +
       '<p class="vp-note" style="margin-top:6px">El registro de usuarios con Amazon se activará en breve.<br>' +
       'VetPlex funciona perfectamente sin cuenta: tu lista, tu progreso y tus personajes se guardan en este dispositivo.</p>' +
@@ -3491,8 +3442,9 @@ window.VP_COGNITO = { region: 'us-east-2', userPoolId: 'us-east-2_WflE7gKP5', us
     h += '<div><h3 class="vp-sec" style="margin:0">' + esc(u.name || 'Mi cuenta') + '</h3>';
     h += '<p class="vp-note" style="margin:4px 0 0">' + esc(u.email || '') + '</p></div></div>';
     h += '<p class="vp-acct-err" id="vp-ac-err" hidden></p>';
-    h += '<button type="button" class="vp-btn vp-btn-ghost" id="vp-ac-logout" style="margin-top:14px;width:100%">Cerrar sesión</button>';
-    h += '<button type="button" class="vp-btn vp-btn-ghost vp-acct-danger" id="vp-ac-del" style="margin-top:10px;width:100%">Eliminar mi cuenta</button>';
+    h += '<button type="button" class="vp-btn vp-btn-primary" id="vp-ac-pub" style="margin-top:14px;width:100%">' + VP_IC_PLUS + 'Publicar anime o película</button>';
+    h += '<button type="button" class="vp-btn vp-btn-ghost" id="vp-ac-logout" style="margin-top:10px;width:100%">' + VP_IC_OUT + 'Cerrar sesión</button>';
+    h += '<button type="button" class="vp-btn vp-btn-ghost vp-acct-danger" id="vp-ac-del" style="margin-top:10px;width:100%">' + VP_IC_TRASH + 'Eliminar mi cuenta</button>';
     h += '<p class="vp-note" id="vp-ac-del-note" style="margin-top:10px" hidden>Esta acción borra tu cuenta de VetPlex para siempre. Toca de nuevo «Eliminar mi cuenta» para confirmar.</p>';
     h += '</div></div>';
     return h;
@@ -3609,6 +3561,8 @@ window.VP_COGNITO = { region: 'us-east-2', userPoolId: 'us-east-2_WflE7gKP5', us
     });
   }
   function vpAcctWireDash(root) {
+    var pb = $('#vp-ac-pub');
+    if (pb) pb.addEventListener('click', function () { if (typeof window.vpOpenAdmin === 'function') window.vpOpenAdmin(); });
     var lo = $('#vp-ac-logout');
     if (lo) lo.addEventListener('click', function () { vpAcctLogout(); });
     var del = $('#vp-ac-del');
@@ -3659,7 +3613,8 @@ window.VP_COGNITO = { region: 'us-east-2', userPoolId: 'us-east-2_WflE7gKP5', us
     var u = store.get(VP_ACCT_KEY, null);
     var has = !!(u && (u.name || u.email));
     b.classList.toggle('has-user', has);
-    b.textContent = has ? String(u.name || u.email).charAt(0).toUpperCase() : '👤';
+    if (has) { b.textContent = String(u.name || u.email).charAt(0).toUpperCase(); }
+    else { b.innerHTML = VP_IC_USER; }
     b.setAttribute('aria-label', has ? ('Mi cuenta · ' + (u.name || u.email)) : 'Mi cuenta');
   }
   function vpOpenCuenta() {
@@ -3724,7 +3679,7 @@ textarea.vp-adm-in { resize: vertical; }
 .vp-adm-row { display: flex; gap: 10px; }
 .vp-adm-row > .vp-adm-lbl { flex: 1 1 0; min-width: 0; }
 .vp-adm-row > .vp-btn { flex: 1 1 0; }
-#vp-adm-gate .vp-btn, #vp-adm-form .vp-btn { flex: 1 1 0; }
+#vp-adm-loginreq .vp-btn, #vp-adm-form .vp-btn { flex: 1 1 0; }
 #vp-adm-poster-prev img { max-height: 170px; border-radius: 10px; margin: 4px 0 12px; display: block; }
 .vp-adm-tabs { display: flex; gap: 8px; margin: 12px 16px 4px; }
 .vp-adm-tabs button {
@@ -3745,7 +3700,7 @@ textarea.vp-adm-in { resize: vertical; }
 }
 .vp-adm-epn { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: #9aa3b8; width: 30px; }
 .vp-adm-eprow .vp-adm-eptitle { flex: 1 1 auto; min-width: 0; margin-top: 0; }
-.vp-adm-eprow .vp-adm-epfile { flex: 1 1 auto; min-width: 0; margin-top: 0; font-size: 12px; padding: 8px; }
+.vp-adm-eprow .vp-adm-epurl { flex: 1 1 auto; min-width: 0; margin-top: 0; font-size: 12px; padding: 8px; }
 .vp-adm-cur { flex: 0 0 auto; font-size: 11px; color: #7dff9a; font-weight: 700; }
 .vp-adm-progress { margin: 12px 0; }
 .vp-adm-prow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -3777,9 +3732,9 @@ textarea.vp-adm-in { resize: vertical; }
    Formulario completo para publicar animes/películas:
    subida de videos e imágenes a AWS S3 + catalog.json como
    fuente de verdad del catálogo.
-   Acceso: correo del administrador + PIN (4-6 dígitos).
-   Credenciales AWS en localStorage (vp_aws_cfg).
-   Sin Firebase. Todo local + S3.
+   Acceso: cualquier usuario con cuenta de VetPlex (sin PIN, sin claves).
+   Catálogo 100% local: semilla integrada + publicaciones del usuario.
+   Sin Firebase. Sin AWS.
    ============================================================ */
 (function () {
   'use strict';
@@ -3792,15 +3747,36 @@ textarea.vp-adm-in { resize: vertical; }
     });
   };
 
-  var ADMIN_EMAIL = 'darelvega6@yahoo.com';
-  var PIN_KEY = 'vp_admin_pin';
-  var SES_KEY = 'vp_admin_ok';
-  var CFG_KEY = 'vp_aws_cfg';
-  var CAT_KEY = 'vp_catalog_v1';
+  var USER_KEY = 'vp_user_items_v1';
+  var OLD_CAT_KEY = 'vp_catalog_v1';
   var SEQ_KEY = 'vp_id_seq';
   var CAT_EVENT = 'vp-catalog-updated';
-  var DEF_BUCKET = 'vetplex-media-682849160982';
-  var DEF_REGION = 'us-east-2';
+  var ACCT_KEY = 'vp_acct_user_v1';
+
+  /* Catálogo inicial: 21 animes construidos desde los personajes integrados. */
+  var VP_SEED_ANIMES = [
+    { id: 'seed-attack-on-titan', title: 'Attack on Titan', image: 'https://upload.wikimedia.org/wikipedia/en/4/4b/Leviackerman.png', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/4/4b/Leviackerman.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-bleach', title: 'Bleach', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/1/1e/IchigoKurosakiBleach.jpg/250px-IchigoKurosakiBleach.jpg', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/1/1e/IchigoKurosakiBleach.jpg/250px-IchigoKurosakiBleach.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-chainsaw-man', title: 'Chainsaw Man', image: 'https://pbs.twimg.com/media/GEKA3qgbkAAudLv.jpg', imageUrl: 'https://pbs.twimg.com/media/GEKA3qgbkAAudLv.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-cowboy-bebop', title: 'Cowboy Bebop', image: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Spike_Spiegel_as_drawn_by_the_creators.jpg', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Spike_Spiegel_as_drawn_by_the_creators.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-death-note', title: 'Death Note', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/0c/Light_from_Death_Note.jpg/250px-Light_from_Death_Note.jpg', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/0c/Light_from_Death_Note.jpg/250px-Light_from_Death_Note.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-demon-slayer', title: 'Demon Slayer', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/e/ea/Tanjirou_manga.png/250px-Tanjirou_manga.png', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/e/ea/Tanjirou_manga.png/250px-Tanjirou_manga.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-dragon-ball', title: 'Dragon Ball', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/4/4c/GokumangaToriyama.png/250px-GokumangaToriyama.png', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/4/4c/GokumangaToriyama.png/250px-GokumangaToriyama.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-el-viaje-de-chihiro', title: 'El viaje de Chihiro', image: 'https://lunar-merch.b-cdn.net/spiritedawaymerchandise.com/media/1321/ec1458f5-40be-4c59-b66f-1f3b2f01bfdc.png', imageUrl: 'https://lunar-merch.b-cdn.net/spiritedawaymerchandise.com/media/1321/ec1458f5-40be-4c59-b66f-1f3b2f01bfdc.png', type: 'movie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-evangelion', title: 'Evangelion', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Rei_Ayanami.jpg/250px-Rei_Ayanami.jpg', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Rei_Ayanami.jpg/250px-Rei_Ayanami.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-fullmetal-alchemist', title: 'Fullmetal Alchemist', image: 'https://upload.wikimedia.org/wikipedia/en/b/b5/Edward85as.JPG', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/b/b5/Edward85as.JPG', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-hunter-x-hunter', title: 'Hunter x Hunter', image: 'https://upload.wikimedia.org/wikipedia/en/9/93/KilluaZoldyckManga.png', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/9/93/KilluaZoldyckManga.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-inuyasha', title: 'Inuyasha', image: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Inuyashamanga5.jpg', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Inuyashamanga5.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-jujutsu-kaisen', title: 'Jujutsu Kaisen', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/96/SatoruGojomanga.png/250px-SatoruGojomanga.png', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/96/SatoruGojomanga.png/250px-SatoruGojomanga.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-mi-vecino-totoro', title: 'Mi vecino Totoro', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/02/My_Neighbor_Totoro_-_Tonari_no_Totoro_%28Movie_Poster%29.jpg/250px-My_Neighbor_Totoro_-_Tonari_no_Totoro_%28Movie_Poster%29.jpg', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/0/02/My_Neighbor_Totoro_-_Tonari_no_Totoro_%28Movie_Poster%29.jpg/250px-My_Neighbor_Totoro_-_Tonari_no_Totoro_%28Movie_Poster%29.jpg', type: 'movie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-my-hero-academia', title: 'My Hero Academia', image: 'https://upload.wikimedia.org/wikipedia/en/d/db/Izuku_Midoriya_%28My_Hero_Academia_character%29.png', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/d/db/Izuku_Midoriya_%28My_Hero_Academia_character%29.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-naruto', title: 'Naruto', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/9a/NarutoUzumaki.png/250px-NarutoUzumaki.png', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/9/9a/NarutoUzumaki.png/250px-NarutoUzumaki.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-one-piece', title: 'One Piece', image: 'https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-one-punch-man', title: 'One Punch Man', image: 'https://upload.wikimedia.org/wikipedia/en/9/98/SaitamaWikipediapage.png', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/9/98/SaitamaWikipediapage.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-pok-mon', title: 'Pokémon', image: 'https://thumb.wikimedia.org/wikipedia/en/thumb/a/a6/Pok%C3%A9mon_Pikachu_art.png/250px-Pok%C3%A9mon_Pikachu_art.png', imageUrl: 'https://thumb.wikimedia.org/wikipedia/en/thumb/a/a6/Pok%C3%A9mon_Pikachu_art.png/250px-Pok%C3%A9mon_Pikachu_art.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-sailor-moon', title: 'Sailor Moon', image: 'https://upload.wikimedia.org/wikipedia/en/2/2b/Sailor_Moon_01.jpg', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/2/2b/Sailor_Moon_01.jpg', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+    { id: 'seed-spy-x-family', title: 'Spy x Family', image: 'https://www.pngmart.com/files/23/Anya-Forger-PNG-Photos.png', imageUrl: 'https://www.pngmart.com/files/23/Anya-Forger-PNG-Photos.png', type: 'serie', status: 'complete', category: '', year: '', synopsis: '', seasons: [], episodes: [], addedAt: 0 },
+  ];
   var MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -3808,42 +3784,40 @@ textarea.vp-adm-in { resize: vertical; }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function toast(m) { if (typeof window.vpToast === 'function') window.vpToast(m); }
 
-  /* ============ capa de catálogo (fuente de verdad: S3 catalog.json) ============ */
-  function vpAwsCfg() {
-    var c = lsGet(CFG_KEY, null) || {};
-    return {
-      keyId: c.keyId || '', secret: c.secret || '',
-      bucket: c.bucket || DEF_BUCKET, region: c.region || DEF_REGION
-    };
+  /* ============ capa de catálogo VetPlex (100% local, sin claves) ============
+     Fuente de verdad: catálogo inicial (VP_SEED_ANIMES) + publicaciones
+     guardadas en este dispositivo ('vp_user_items_v1'). Publicar no pide
+     ninguna clave: todo se guarda localmente y aparece al instante. */
+  function vpUserItems() { var a = lsGet(USER_KEY, null); return Array.isArray(a) ? a : []; }
+  function vpSaveUserItems(a) { lsSet(USER_KEY, a || []); }
+  function vpMergedCatalog() {
+    var mine = {};
+    vpUserItems().forEach(function (a) { if (a && a.id) mine[a.id] = a; });
+    var out = VP_SEED_ANIMES.filter(function (a) { return a && a.id && !mine[a.id]; });
+    vpUserItems().slice().sort(function (x, y) { return (y.addedAt || 0) - (x.addedAt || 0); })
+      .forEach(function (a) { if (a && a.id) out.push(a); });
+    return out;
   }
-  function vpS3Base() {
-    var c = vpAwsCfg();
-    return 'https://' + c.bucket + '.s3.' + c.region + '.amazonaws.com';
-  }
-  function vpReadCachedCatalog() {
-    var j = lsGet(CAT_KEY, null);
-    return Array.isArray(j) ? j : [];
-  }
-  /* Pinta la caché local al instante y luego intenta S3 (cache-bust).
-     Si S3 responde 200 con un array válido, manda y actualiza la caché. */
-  function vpBootCatalog(render) {
-    render(vpReadCachedCatalog());
-    var done = false;
-    var to = setTimeout(function () { done = true; }, 9000);
-    fetch(vpS3Base() + '/catalog.json?t=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (j) {
-        if (done) return;
-        clearTimeout(to);
-        if (Array.isArray(j)) { lsSet(CAT_KEY, j); render(j); }
-      })
-      .catch(function () { clearTimeout(to); });
-  }
-  function vpGetCatalog() { return Array.isArray(window.__vpAnimes) ? window.__vpAnimes : []; }
-  function vpCatalogSave(cat) {
+  function vpRefreshCatalog() {
+    var cat = vpMergedCatalog();
     window.__vpAnimes = cat;
-    lsSet(CAT_KEY, cat);
-    document.dispatchEvent(new CustomEvent(CAT_EVENT));
+    try { document.dispatchEvent(new CustomEvent(CAT_EVENT)); } catch (e) {}
+    return cat;
+  }
+  function vpGetCatalog() { return Array.isArray(window.__vpAnimes) ? window.__vpAnimes : vpMergedCatalog(); }
+  function vpCatalogSave() { return vpRefreshCatalog(); } /* compat */
+  function vpBootCatalog(render) {
+    /* Migración única del caché de la época AWS: rescata publicaciones locales vp-a*. */
+    try {
+      if (!localStorage.getItem(USER_KEY)) {
+        var old = lsGet(OLD_CAT_KEY, null);
+        if (Array.isArray(old) && old.length) {
+          var mine = old.filter(function (a) { return a && a.id && /^vp-a\d+$/.test(a.id); });
+          if (mine.length) lsSet(USER_KEY, mine);
+        }
+      }
+    } catch (e) {}
+    render(vpRefreshCatalog());
   }
   /* IDs estables y ordenables: vp-a0001, vp-a0002… */
   function vpNextId() {
@@ -3851,25 +3825,14 @@ textarea.vp-adm-in { resize: vertical; }
     n += 1; lsSet(SEQ_KEY, n);
     return 'vp-a' + String(n).padStart(4, '0');
   }
-  window.vpAwsCfg = vpAwsCfg;
-  window.vpS3Base = vpS3Base;
   window.vpBootCatalog = vpBootCatalog;
   window.vpGetCatalog = vpGetCatalog;
   window.vpCatalogSave = vpCatalogSave;
+  window.vpRefreshCatalog = vpRefreshCatalog;
+  window.vpUserItems = vpUserItems;
   window.vpNextId = vpNextId;
 
-  /* ============ rutas S3 ============ */
-  function vpExt(name) { var m = String(name || '').match(/\.([a-z0-9]{1,6})$/i); return m ? m[1].toLowerCase() : 'bin'; }
-  function vpPad2(n) { return String(n).padStart(2, '0'); }
-  function vpKeyPoster(id, fileName) { return 'media/images/' + id + '/poster.' + vpExt(fileName); }
-  function vpKeyMovie(id, fileName) { return 'media/videos/' + id + '/movie.' + vpExt(fileName); }
-  function vpKeyEpisode(id, season, ep, fileName) {
-    return 'media/videos/' + id + '/s' + vpPad2(season) + 'e' + vpPad2(ep) + '.' + vpExt(fileName);
-  }
 
-  /* ============ fechas: "2026-09-25" -> "25 de septiembre de 2026"
-     (el Calendario parsea el formato largo en hora local, sin
-     desfase de zona horaria) ============ */
   function vpFechaLarga(iso) {
     var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m) return '';
@@ -3920,93 +3883,7 @@ textarea.vp-adm-in { resize: vertical; }
     return a;
   }
 
-  /* ============ puerta: correo + PIN ============ */
-  function vpPinHash(pin) {
-    var salted = 'vetplex$' + String(pin);
-    if (window.crypto && crypto.subtle && window.TextEncoder) {
-      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(salted)).then(function (buf) {
-        return Array.prototype.map.call(new Uint8Array(buf), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
-      });
-    }
-    var h = 7;
-    for (var i = 0; i < salted.length; i++) h = ((h * 31) + salted.charCodeAt(i)) >>> 0;
-    return Promise.resolve('f' + h.toString(16));
-  }
-  /* {ok, mode, error}. mode 'create' = aún no hay PIN (hay que crearlo). */
-  function vpGateCheck(email, pin, pin2) {
-    email = String(email || '').trim().toLowerCase();
-    if (email !== ADMIN_EMAIL) return Promise.resolve({ ok: false, error: 'Ese correo no tiene acceso de administrador.' });
-    pin = String(pin || '').trim();
-    if (!/^\d{4,6}$/.test(pin)) return Promise.resolve({ ok: false, error: 'El PIN debe tener de 4 a 6 dígitos.' });
-    var stored = null;
-    try { stored = localStorage.getItem(PIN_KEY); } catch (e) {}
-    if (!stored) {
-      if (String(pin2 || '').trim() !== pin) {
-        return Promise.resolve({ ok: false, mode: 'create', error: 'Los PIN no coinciden. Escríbelo dos veces igual.' });
-      }
-      return vpPinHash(pin).then(function (h) {
-        try { localStorage.setItem(PIN_KEY, h); } catch (e) {}
-        return { ok: true, mode: 'create' };
-      });
-    }
-    return vpPinHash(pin).then(function (h) {
-      if (h === stored) return { ok: true, mode: 'login' };
-      return { ok: false, mode: 'login', error: 'PIN incorrecto.' };
-    });
-  }
-  function vpHasSession() { try { return sessionStorage.getItem(SES_KEY) === '1'; } catch (e) { return false; } }
-  function vpSetSession() { try { sessionStorage.setItem(SES_KEY, '1'); } catch (e) {} }
-  function vpClearSession() { try { sessionStorage.removeItem(SES_KEY); } catch (e) {} }
 
-  /* ============ AWS SDK (carga perezosa, solo al usar el panel) ============ */
-  var _sdk = null;
-  function vpSdk() {
-    if (_sdk) return Promise.resolve(_sdk);
-    return Promise.all([
-      import('https://esm.sh/@aws-sdk/client-s3@3.600.0'),
-      import('https://esm.sh/@aws-sdk/lib-storage@3.600.0')
-    ]).then(function (rs) { _sdk = { s3: rs[0], up: rs[1] }; return _sdk; });
-  }
-  function vpClient(sdk) {
-    var cfg = vpAwsCfg();
-    if (!cfg.keyId || !cfg.secret) throw new Error('Configura primero tu Access Key ID y Secret en la pestaña AWS.');
-    return new sdk.s3.S3Client({ region: cfg.region, credentials: { accessKeyId: cfg.keyId, secretAccessKey: cfg.secret } });
-  }
-  /* Subida multipart (videos grandes) con progreso */
-  function vpUploadFile(sdk, client, key, file, onPct) {
-    var u = new sdk.up.Upload({
-      client: client,
-      params: { Bucket: vpAwsCfg().bucket, Key: key, Body: file, ContentType: file.type || 'application/octet-stream' }
-    });
-    if (onPct) u.on('httpUploadProgress', function (p) { if (p && p.total) onPct((p.loaded / p.total) * 100); });
-    return u.done().then(function () { return vpS3Base() + '/' + key; });
-  }
-  function vpPutCatalogJson(sdk, client, cat) {
-    return client.send(new sdk.s3.PutObjectCommand({
-      Bucket: vpAwsCfg().bucket, Key: 'catalog.json',
-      Body: JSON.stringify(cat), ContentType: 'application/json'
-    }));
-  }
-
-  /* ============ UI: progreso ============ */
-  function vpProgRow(label) {
-    var box = $('#vp-adm-progress');
-    if (!box) return function () {};
-    box.hidden = false;
-    var row = document.createElement('div');
-    row.className = 'vp-adm-prow';
-    var nm = document.createElement('span'); nm.className = 'vp-adm-pname'; nm.textContent = label;
-    var bar = document.createElement('div'); bar.className = 'vp-adm-pbar';
-    var fill = document.createElement('i'); bar.appendChild(fill);
-    var pct = document.createElement('span'); pct.className = 'vp-adm-ppct'; pct.textContent = '0%';
-    row.appendChild(nm); row.appendChild(bar); row.appendChild(pct);
-    box.appendChild(row);
-    return function (p) {
-      p = Math.max(0, Math.min(100, p || 0));
-      fill.style.width = p + '%';
-      pct.textContent = Math.round(p) + '%';
-    };
-  }
 
   /* ============ UI: navegación del panel ============ */
   var vpAdmPrevTab = 'inicio';
@@ -4021,30 +3898,21 @@ textarea.vp-adm-in { resize: vertical; }
     });
     if (name === 'gestionar') vpRenderAdmList();
   }
-  function vpShowGate() {
-    var gate = $('#vp-adm-gate'), panel = $('#vp-adm-panel');
-    if (gate) gate.hidden = false;
+  function vpAcctLoggedIn() {
+    try {
+      var u = JSON.parse(localStorage.getItem(ACCT_KEY) || 'null');
+      return !!(u && u.email);
+    } catch (e) { return false; }
+  }
+  function vpShowLoginReq() {
+    var panel = $('#vp-adm-panel'), lr = $('#vp-adm-loginreq');
     if (panel) panel.hidden = true;
-    var hasPin = null;
-    try { hasPin = localStorage.getItem(PIN_KEY); } catch (e) {}
-    var w2 = $('#vp-adm-pin2-wrap');
-    if (w2) w2.hidden = !!hasPin;
-    var btn = $('#vp-adm-enter');
-    if (btn) btn.textContent = hasPin ? 'Entrar' : 'Crear PIN y entrar';
-    var msg = $('#vp-adm-gate-msg');
-    if (msg) msg.textContent = hasPin
-      ? 'Escribe tu correo y tu PIN para entrar.'
-      : 'Primera vez: escribe tu correo y crea un PIN de 4 a 6 dígitos.';
+    if (lr) lr.hidden = false;
   }
   function vpShowPanel() {
-    var gate = $('#vp-adm-gate'), panel = $('#vp-adm-panel');
-    if (gate) gate.hidden = true;
+    var panel = $('#vp-adm-panel'), lr = $('#vp-adm-loginreq');
+    if (lr) lr.hidden = true;
     if (panel) panel.hidden = false;
-    var cfg = vpAwsCfg();
-    if ($('#vp-adm-key')) $('#vp-adm-key').value = cfg.keyId;
-    if ($('#vp-adm-secret')) $('#vp-adm-secret').value = cfg.secret;
-    if ($('#vp-adm-bucket')) $('#vp-adm-bucket').value = cfg.bucket;
-    if ($('#vp-adm-region')) $('#vp-adm-region').value = cfg.region;
     vpTypeToggle();
     vpBuildSeasonFields();
     vpAdmTab('nuevo');
@@ -4056,63 +3924,12 @@ textarea.vp-adm-in { resize: vertical; }
     var adm = $('#vp-view-admin');
     if (adm) adm.classList.add('on');
     window.scrollTo(0, 0);
-    if (vpHasSession()) vpShowPanel(); else vpShowGate();
+    if (vpAcctLoggedIn()) vpShowPanel(); else vpShowLoginReq();
   }
   function vpCloseAdmin() { if (typeof window.vpGo === 'function') window.vpGo(vpAdmPrevTab); }
   window.vpOpenAdmin = vpOpenAdmin;
 
-  /* ============ UI: puerta ============ */
-  function vpGateSubmit() {
-    var err = $('#vp-adm-gate-err');
-    if (err) err.hidden = true;
-    var email = $('#vp-adm-email') ? $('#vp-adm-email').value : '';
-    var pin = $('#vp-adm-pin') ? $('#vp-adm-pin').value : '';
-    var pin2 = $('#vp-adm-pin2') ? $('#vp-adm-pin2').value : '';
-    vpGateCheck(email, pin, pin2).then(function (r) {
-      if (r.ok) {
-        vpSetSession();
-        vpShowPanel();
-        toast(r.mode === 'create' ? 'PIN creado. Bienvenido.' : 'Bienvenido.');
-      } else {
-        if (err) { err.textContent = r.error || 'No se pudo entrar.'; err.hidden = false; }
-      }
-    });
-  }
 
-  /* ============ UI: AWS ============ */
-  function vpSaveAws() {
-    lsSet(CFG_KEY, {
-      keyId: $('#vp-adm-key') ? $('#vp-adm-key').value.trim() : '',
-      secret: $('#vp-adm-secret') ? $('#vp-adm-secret').value.trim() : '',
-      bucket: $('#vp-adm-bucket') ? $('#vp-adm-bucket').value.trim() : DEF_BUCKET,
-      region: $('#vp-adm-region') ? $('#vp-adm-region').value.trim() : DEF_REGION
-    });
-    var msg = $('#vp-adm-aws-msg');
-    if (msg) { msg.style.color = '#7dff9a'; msg.textContent = '✓ Configuración de AWS guardada.'; }
-    toast('AWS guardado');
-  }
-  function vpTestAws() {
-    var msg = $('#vp-adm-aws-msg');
-    if (msg) { msg.style.color = '#9aa3b8'; msg.textContent = 'Probando conexión…'; }
-    vpSaveAwsSilent();
-    vpSdk().then(function (sdk) {
-      var client = vpClient(sdk);
-      var cfg = vpAwsCfg();
-      return client.send(new sdk.s3.ListObjectsV2Command({ Bucket: cfg.bucket, MaxKeys: 1 }));
-    }).then(function () {
-      if (msg) { msg.style.color = '#7dff9a'; msg.textContent = '✓ Conexión OK: el bucket responde.'; }
-    }).catch(function (e) {
-      if (msg) { msg.style.color = '#ff8a8a'; msg.textContent = '✗ ' + (e && e.message ? e.message : 'Error de conexión'); }
-    });
-  }
-  function vpSaveAwsSilent() {
-    lsSet(CFG_KEY, {
-      keyId: $('#vp-adm-key') ? $('#vp-adm-key').value.trim() : '',
-      secret: $('#vp-adm-secret') ? $('#vp-adm-secret').value.trim() : '',
-      bucket: $('#vp-adm-bucket') ? $('#vp-adm-bucket').value.trim() : DEF_BUCKET,
-      region: $('#vp-adm-region') ? $('#vp-adm-region').value.trim() : DEF_REGION
-    });
-  }
 
   /* ============ UI: formulario ============ */
   function vpTypeToggle() {
@@ -4168,12 +3985,10 @@ textarea.vp-adm-in { resize: vertical; }
       ti.type = 'text'; ti.maxLength = 120; ti.placeholder = 'Título del episodio';
       ti.className = 'vp-adm-in vp-adm-eptitle'; ti.value = pe.title || '';
       var fi = document.createElement('input');
-      fi.type = 'file'; fi.accept = 'video/*'; fi.className = 'vp-adm-in vp-adm-epfile';
+      fi.type = 'url'; fi.placeholder = 'URL del video (YouTube o MP4)';
+      fi.className = 'vp-adm-in vp-adm-epurl'; fi.spellcheck = false;
+      fi.value = pe.videoUrl || '';
       row.appendChild(num); row.appendChild(ti); row.appendChild(fi);
-      if (pe.videoUrl) {
-        var cur = document.createElement('span'); cur.className = 'vp-adm-cur'; cur.textContent = '✓ video actual';
-        row.appendChild(cur);
-      }
       box.appendChild(row);
     }
   }
@@ -4188,12 +4003,10 @@ textarea.vp-adm-in { resize: vertical; }
       type: type,
       status: $('#vp-adm-status') ? $('#vp-adm-status').value : 'complete',
       posterFile: ($('#vp-adm-poster') && $('#vp-adm-poster').files[0]) || null,
-      movieFile: null,
+      movieUrl: ($('#vp-adm-movieurl') && $('#vp-adm-movieurl').value.trim()) || '',
       seasons: []
     };
-    if (type === 'movie') {
-      d.movieFile = ($('#vp-adm-moviefile') && $('#vp-adm-moviefile').files[0]) || null;
-    } else {
+    if (type !== 'movie') {
       $$('#vp-adm-seasons-box .vp-adm-season').forEach(function (fs) {
         var s = parseInt(fs.getAttribute('data-season'), 10);
         var seps = [];
@@ -4201,7 +4014,7 @@ textarea.vp-adm-in { resize: vertical; }
           seps.push({
             ep: parseInt(row.getAttribute('data-ep'), 10),
             title: row.querySelector('.vp-adm-eptitle').value.trim(),
-            file: row.querySelector('.vp-adm-epfile').files[0] || null
+            url: row.querySelector('.vp-adm-epurl').value.trim()
           });
         });
         d.seasons.push({ season: s, episodes: seps });
@@ -4227,118 +4040,113 @@ textarea.vp-adm-in { resize: vertical; }
     if (pb) { pb.disabled = false; pb.textContent = 'Publicar'; }
   }
 
-  /* ============ publicar ============ */
+  /* ============ publicar (local, sin claves) ============ */
+  /* Portada: archivo -> dataURL ligera (máx 720px, JPEG) para guardar local. */
+  function vpPosterDataURL(file) {
+    return new Promise(function (res, rej) {
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        try {
+          var max = 720, w = img.naturalWidth || max, h = img.naturalHeight || max;
+          var sc = Math.min(1, max / Math.max(w, h));
+          var cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+          var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+          cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+          URL.revokeObjectURL(url);
+          res(cv.toDataURL('image/jpeg', 0.85));
+        } catch (e) { try { URL.revokeObjectURL(url); } catch (_) {} rej(e); }
+      };
+      img.onerror = function () { try { URL.revokeObjectURL(url); } catch (_) {} rej(new Error('img')); };
+      img.src = url;
+    });
+  }
   function vpPublish(ev) {
     if (ev) ev.preventDefault();
     var d = vpCollectForm();
     if (!d.title) { toast('Ponle un título.'); return; }
+    var items = vpUserItems();
     var editId = $('#vp-adm-editid') ? $('#vp-adm-editid').value : '';
     var prev = null;
     if (editId) {
-      var cat0 = vpGetCatalog();
-      for (var i = 0; i < cat0.length; i++) if (cat0[i].id === editId) { prev = cat0[i]; break; }
+      for (var i = 0; i < items.length; i++) if (items[i].id === editId) { prev = items[i]; break; }
     }
-    if (!d.posterFile && !(prev && prev.image)) { toast('Sube una portada.'); return; }
-    if (d.type === 'movie' && !d.movieFile && !(prev && prev.videoUrl)) { toast('Sube el video de la película.'); return; }
+    if (!d.posterFile && !(prev && (prev.imageUrl || prev.image))) { toast('Sube una portada.'); return; }
+    if (d.type === 'movie' && !d.movieUrl && !(prev && prev.videoUrl)) { toast('Pega la URL del video.'); return; }
+    var needEp = 0, haveUrl = 0;
     if (d.type !== 'movie') {
-      var needEp = 0, haveFile = 0;
-      d.seasons.forEach(function (s) { s.episodes.forEach(function () { needEp++; }); });
-      d.seasons.forEach(function (s) { s.episodes.forEach(function (e) { if (e.file) haveFile++; }); });
+      d.seasons.forEach(function (s) {
+        s.episodes.forEach(function (e) { needEp++; if (e.url) haveUrl++; });
+      });
       if (!needEp) { toast('Agrega al menos un episodio.'); return; }
-      if (!haveFile && !(prev && prev.episodes && prev.episodes.length)) { toast('Sube al menos un video de episodio.'); return; }
+      var prevEps = prev && prev.episodes ? prev.episodes.length : 0;
+      if (!haveUrl && !prevEps) { toast('Pega la URL de al menos un episodio.'); return; }
     }
     var btn = $('#vp-adm-publish');
-    if (btn) { btn.disabled = true; btn.textContent = 'Subiendo…'; }
-    var prog = $('#vp-adm-progress');
-    if (prog) { prog.innerHTML = ''; prog.hidden = false; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Publicando…'; }
     var id = editId || vpNextId();
     var relDate = d.releaseDate || (prev && prev.releaseDate) || '';
-
-    vpSdk().then(function (sdk) {
-      var client = vpClient(sdk);
-      var chain = Promise.resolve();
-      var image = (prev && prev.image) || '';
-      var videoUrl = (prev && prev.videoUrl) || '';
-      var epUrls = {};
-      if (prev && prev.episodes) prev.episodes.forEach(function (e) { epUrls[e.season + '-' + e.ep] = e.videoUrl; });
-
-      if (d.posterFile) {
-        chain = chain.then(function () {
-          var set = vpProgRow('Portada');
-          return vpUploadFile(sdk, client, vpKeyPoster(id, d.posterFile.name), d.posterFile, set)
-            .then(function (u) { image = u; });
-        });
+    var epUrls = {};
+    if (prev && prev.episodes) prev.episodes.forEach(function (e) { epUrls[e.season + '-' + e.ep] = e.videoUrl; });
+    var newSeasons = d.seasons.map(function (s) {
+      return {
+        season: s.season,
+        episodes: s.episodes.map(function (e) {
+          return { n: e.ep, title: e.title, videoUrl: e.url || epUrls[s.season + '-' + e.ep] || '' };
+        })
+      };
+    });
+    var finish = function (image) {
+      var anime = vpBuildAnime({
+        id: id, title: d.title, synopsis: d.synopsis, image: image,
+        category: d.category, year: d.year, type: d.type, status: d.status,
+        releaseDate: relDate, videoUrl: d.type === 'movie' ? (d.movieUrl || (prev && prev.videoUrl) || '') : '',
+        seasons: newSeasons, addedAt: (prev && prev.addedAt) || Date.now()
+      });
+      anime.imageUrl = anime.image;
+      var mine = false;
+      for (var k = 0; k < items.length; k++) if (items[k].id === id) { items[k] = anime; mine = true; break; }
+      if (!mine) items.push(anime);
+      try { vpSaveUserItems(items); }
+      catch (e) {
+        toast('No se pudo guardar (almacenamiento lleno).');
+        if (btn) { btn.disabled = false; btn.textContent = 'Publicar'; }
+        return;
       }
-      if (d.type === 'movie' && d.movieFile) {
-        chain = chain.then(function () {
-          var set = vpProgRow('Película');
-          return vpUploadFile(sdk, client, vpKeyMovie(id, d.movieFile.name), d.movieFile, set)
-            .then(function (u) { videoUrl = u; });
-        });
-      }
-      var newSeasons = d.seasons.map(function (s) {
-        return {
-          season: s.season,
-          episodes: s.episodes.map(function (e) {
-            return { n: e.ep, ep: e.ep, title: e.title, videoUrl: epUrls[s.season + '-' + e.ep] || '', _file: e.file };
-          })
-        };
-      });
-      newSeasons.forEach(function (s) {
-        s.episodes.forEach(function (e) {
-          if (e._file) {
-            (function (ee, ss) {
-              chain = chain.then(function () {
-                var set = vpProgRow('T' + ss + ' E' + ee.ep + (ee.title ? ' · ' + ee.title : ''));
-                return vpUploadFile(sdk, client, vpKeyEpisode(id, ss, ee.ep, ee._file.name), ee._file, set)
-                  .then(function (u) { ee.videoUrl = u; delete ee._file; });
-              });
-            })(e, s.season);
-          } else { delete e._file; }
-        });
-      });
-
-      return chain.then(function () {
-        var anime = vpBuildAnime({
-          id: id, title: d.title, synopsis: d.synopsis, image: image,
-          category: d.category, year: d.year, type: d.type, status: d.status,
-          releaseDate: relDate, videoUrl: videoUrl,
-          seasons: newSeasons, addedAt: (prev && prev.addedAt) || Date.now()
-        });
-        var cat = vpGetCatalog().filter(function (a) { return a.id !== id; });
-        cat.push(anime);
-        return vpPutCatalogJson(sdk, client, cat).then(function () { return cat; });
-      });
-    }).then(function (cat) {
-      vpCatalogSave(cat);
+      vpRefreshCatalog();
       toast(editId ? 'Cambios guardados' : '¡Publicado en VetPlex!');
       vpResetForm();
       vpAdmTab('gestionar');
-    }).catch(function (err) {
-      toast('Error: ' + (err && err.message ? err.message : 'no se pudo subir'));
-    }).then(function () {
-      if (btn) { btn.disabled = false; btn.textContent = editId ? 'Guardar cambios' : 'Publicar'; }
-    });
+      if (btn) { btn.disabled = false; btn.textContent = 'Publicar'; }
+    };
+    if (d.posterFile) {
+      vpPosterDataURL(d.posterFile).then(finish, function () {
+        toast('No se pudo leer la portada.');
+        if (btn) { btn.disabled = false; btn.textContent = editId ? 'Guardar cambios' : 'Publicar'; }
+      });
+    } else {
+      finish((prev && (prev.imageUrl || prev.image)) || '');
+    }
   }
 
   /* ============ gestionar: editar / borrar ============ */
   function vpRenderAdmList() {
     var box = $('#vp-adm-list');
     if (!box) return;
-    var cat = vpGetCatalog().slice().sort(function (a, b) { return (b.addedAt || 0) - (a.addedAt || 0); });
+    var items = vpUserItems().slice().sort(function (a, b) { return (b.addedAt || 0) - (a.addedAt || 0); });
     box.innerHTML = '';
-    if (!cat.length) {
-      box.innerHTML = '<p class="vp-empty">Aún no has publicado nada.</p>';
+    if (!items.length) {
+      box.innerHTML = '<p class="vp-empty">Aún no has publicado nada. Usa la pestaña ＋ Nuevo para compartir tu primer título.</p>';
       return;
     }
-    cat.forEach(function (a) {
+    items.forEach(function (a) {
       var neps = (a.episodes || []).length;
       var it = document.createElement('div');
       it.className = 'vp-adm-item';
       var im = document.createElement('img');
       im.className = 'vp-adm-thumb'; im.alt = ''; im.loading = 'lazy';
       im.onerror = function () { im.style.display = 'none'; };
-      if (a.image) im.src = a.image; else im.style.display = 'none';
+      if (a.imageUrl || a.image) im.src = a.imageUrl || a.image; else im.style.display = 'none';
       var met = document.createElement('div'); met.className = 'vp-adm-imet';
       var h4 = document.createElement('h4'); h4.textContent = a.title || 'Sin título';
       var pp = document.createElement('p');
@@ -4357,6 +4165,7 @@ textarea.vp-adm-in { resize: vertical; }
       box.appendChild(it);
     });
   }
+
   function vpEditAnime(id) {
     var a = null, cat = vpGetCatalog();
     for (var i = 0; i < cat.length; i++) if (cat[i].id === id) { a = cat[i]; break; }
@@ -4371,6 +4180,7 @@ textarea.vp-adm-in { resize: vertical; }
     $('#vp-adm-type').value = a.type === 'movie' ? 'movie' : 'serie';
     $('#vp-adm-status').value = a.status === 'airing' ? 'airing' : 'complete';
     vpTypeToggle();
+    if ($('#vp-adm-movieurl')) $('#vp-adm-movieurl').value = a.videoUrl || '';
     var pv = $('#vp-adm-poster-prev');
     if (pv) pv.innerHTML = a.image
       ? '<p class="vp-note">Portada actual (se conserva si no subes otra):</p><img src="' + esc(a.image) + '" alt="">'
@@ -4386,62 +4196,23 @@ textarea.vp-adm-in { resize: vertical; }
     toast('Editando: ' + a.title);
   }
   function vpDeleteAnime(id) {
-    var a = null, cat = vpGetCatalog();
-    for (var i = 0; i < cat.length; i++) if (cat[i].id === id) { a = cat[i]; break; }
+    var items = vpUserItems(), a = null;
+    for (var i = 0; i < items.length; i++) if (items[i].id === id) { a = items[i]; break; }
     if (!a) return;
-    if (!confirm('¿Borrar "' + (a.title || '') + '" del catálogo y eliminar sus videos de S3?')) return;
-    toast('Borrando…');
-    vpSdk().then(function (sdk) {
-      var client = vpClient(sdk);
-      var cfg = vpAwsCfg();
-      var prefixes = ['media/images/' + id + '/', 'media/videos/' + id + '/'];
-      var allKeys = [];
-      var p = Promise.resolve();
-      prefixes.forEach(function (px) {
-        p = p.then(function () {
-          return client.send(new sdk.s3.ListObjectsV2Command({ Bucket: cfg.bucket, Prefix: px }))
-            .then(function (r) { (r.Contents || []).forEach(function (o) { allKeys.push(o.Key); }); });
-        });
-      });
-      return p.then(function () {
-        var d = Promise.resolve();
-        for (var i = 0; i < allKeys.length; i += 1000) {
-          (function (ch) {
-            d = d.then(function () {
-              return client.send(new sdk.s3.DeleteObjectsCommand({
-                Bucket: cfg.bucket,
-                Delete: { Objects: ch.map(function (k) { return { Key: k }; }) }
-              }));
-            });
-          })(allKeys.slice(i, i + 1000));
-        }
-        return d;
-      }).then(function () {
-        var nc = vpGetCatalog().filter(function (x) { return x.id !== id; });
-        return vpPutCatalogJson(sdk, client, nc).then(function () { return nc; });
-      });
-    }).then(function (nc) {
-      vpCatalogSave(nc);
-      vpRenderAdmList();
-      toast('Eliminado');
-    }).catch(function (err) {
-      toast('Error al borrar: ' + (err && err.message ? err.message : ''));
-    });
+    if (!confirm('¿Borrar "' + (a.title || '') + '" de tus publicaciones?')) return;
+    vpSaveUserItems(items.filter(function (x) { return x.id !== id; }));
+    vpRefreshCatalog();
+    vpRenderAdmList();
+    toast('Publicación borrada');
   }
 
-  /* ============ arranque ============ */
   function vpAdmInit() {
     var link = $('#vp-admin-link');
     if (link) link.addEventListener('click', vpOpenAdmin);
     var back = $('#vp-admin-back');
     if (back) back.addEventListener('click', vpCloseAdmin);
-    var enter = $('#vp-adm-enter');
-    if (enter) enter.addEventListener('click', vpGateSubmit);
-    [$('#vp-adm-email'), $('#vp-adm-pin'), $('#vp-adm-pin2')].forEach(function (inp) {
-      if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') vpGateSubmit(); });
-    });
-    var logout = $('#vp-adm-logout');
-    if (logout) logout.addEventListener('click', function () { vpClearSession(); vpShowGate(); toast('Sesión cerrada'); });
+    var gl = $('#vp-adm-gologin');
+    if (gl) gl.addEventListener('click', function () { if (typeof window.vpOpenCuenta === 'function') window.vpOpenCuenta(); });
     $$('#vp-view-admin [data-atab]').forEach(function (b) {
       b.addEventListener('click', function () { vpAdmTab(b.getAttribute('data-atab')); });
     });
@@ -4466,26 +4237,18 @@ textarea.vp-adm-in { resize: vertical; }
     if (form) form.addEventListener('submit', vpPublish);
     var ce = $('#vp-adm-cancel-edit');
     if (ce) ce.addEventListener('click', vpResetForm);
-    var ta = $('#vp-adm-test');
-    if (ta) ta.addEventListener('click', vpTestAws);
-    var sa = $('#vp-adm-save-aws');
-    if (sa) sa.addEventListener('click', vpSaveAws);
   }
 
   /* Gancho de pruebas (QA): funciones puras */
   window.vpAdminTest = {
     vpBuildAnime: vpBuildAnime,
-    vpKeyPoster: vpKeyPoster,
-    vpKeyMovie: vpKeyMovie,
-    vpKeyEpisode: vpKeyEpisode,
     vpFechaLarga: vpFechaLarga,
-    vpGateCheck: vpGateCheck,
     vpNextId: vpNextId,
-    vpExt: vpExt,
     vpBootCatalog: vpBootCatalog,
-    vpReadCachedCatalog: vpReadCachedCatalog,
-    vpCatalogSave: vpCatalogSave,
-    ADMIN_EMAIL: ADMIN_EMAIL
+    vpMergedCatalog: vpMergedCatalog,
+    vpUserItems: vpUserItems,
+    vpRefreshCatalog: vpRefreshCatalog,
+    VP_SEED_ANIMES: VP_SEED_ANIMES
   };
 
   if (document.readyState === 'loading') {
